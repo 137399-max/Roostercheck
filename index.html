@@ -17,6 +17,31 @@
   </header>
 
   <main class="shell">
+    <section class="panel" id="accountPanel">
+      <p class="eyebrow">JOUW ACCOUNT</p>
+      <h2>Inloggen bij Roostercheck</h2>
+      <p class="muted">Maak een account aan of log in om je rooster te bewaren.</p>
+
+      <form id="authForm">
+        <label for="authEmail">E-mailadres</label>
+        <input id="authEmail" type="email" required autocomplete="email">
+
+        <label for="authPassword">Wachtwoord</label>
+        <input id="authPassword" type="password" required minlength="6" autocomplete="current-password">
+
+        <button class="primary" type="submit" id="loginBtn">Inloggen</button>
+        <button class="secondary" type="button" id="signupBtn">Account aanmaken</button>
+      </form>
+
+      <button class="secondary" type="button" id="googleBtn">Doorgaan met Google</button>
+      <p id="authStatus" class="small muted" aria-live="polite"></p>
+
+      <div id="signedInArea" hidden>
+        <p id="userEmail"></p>
+        <button class="secondary" type="button" id="logoutBtn">Uitloggen</button>
+      </div>
+    </section>
+
     <section class="welcome">
       <div>
         <p class="eyebrow" id="todayLabel">JOUW SCHOOLROOSTER</p>
@@ -55,9 +80,11 @@
       </div>
     </section>
 
-    <section class="panel settings">
-      <div class="section-heading"><div><p class="eyebrow">JOUW GEGEVENS</p><h2>Rooster toevoegen</h2></div></div>
-      <p class="muted">Begin met een iCal/ICS-export uit je schoolportaal. Je bestand wordt alleen in deze browser verwerkt.</p>
+    <section class="panel settings" id="settings">
+      <div class="section-heading">
+        <div><p class="eyebrow">JOUW GEGEVENS</p><h2>Rooster toevoegen</h2></div>
+      </div>
+      <p class="muted">Begin met een iCal/ICS-export uit je schoolportaal.</p>
       <label class="file-picker">
         <span>📅 Kies ICS-bestand</span>
         <input id="icsFile" type="file" accept=".ics,text/calendar">
@@ -69,16 +96,19 @@
       </div>
       <div class="notice">
         <strong>Magister</strong>
-        <p>Een officiële Magister API is niet vrij beschikbaar voor willekeurige apps. Roostercheck vraagt daarom nooit om je Magister-wachtwoord.</p>
+        <p>Roostercheck vraagt nooit om je Magister-wachtwoord.</p>
       </div>
     </section>
 
     <footer>Roostercheck · Gratis schoolrooster · Onafhankelijk hobbyproject</footer>
   </main>
+
   <nav class="bottom-nav">
     <a class="active" href="#schedule">⌂ <span>Rooster</span></a>
     <a href="#settings">⚙ <span>Instellingen</span></a>
   </nav>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="app.js"></script>
 </body>
 </html>
