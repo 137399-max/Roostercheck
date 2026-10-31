@@ -11,7 +11,6 @@
   --muted: #858399;
   --line: #eceaf3;
   --red: #d92d45;
-  --red-light: #fff0f1;
 }
 
 * {
@@ -178,7 +177,7 @@ button:active {
   color: var(--purple);
 }
 
-/* WEEK EN DAGTABS */
+/* WEEK EN DAGEN */
 .swipe-hint {
   margin: 0 0 8px;
   font-size: 11px;
@@ -188,16 +187,24 @@ button:active {
 #weekTabs {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 6px;
-  padding: 5px 0 14px;
+  grid-auto-flow: row;
+  gap: 5px;
+  width: 100%;
+  padding: 8px 0 14px;
   touch-action: pan-y;
   user-select: none;
 }
 
 .day-tab {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
   width: 100%;
   min-width: 0;
-  padding: 9px 2px;
+  height: 58px;
+  min-height: 58px;
+  padding: 5px 1px;
   border: 1px solid var(--line);
   border-radius: 11px;
   background: #faf9fd;
@@ -230,8 +237,8 @@ button:active {
 /* LESSEN */
 .lesson {
   display: grid;
-  grid-template-columns: 57px 4px minmax(0, 1fr);
-  gap: 12px;
+  grid-template-columns: 75px 4px minmax(0, 1fr);
+  gap: 10px;
   align-items: center;
   padding: 15px 0;
   border-bottom: 1px solid var(--line);
@@ -274,7 +281,6 @@ button:active {
   border-radius: 7px;
   font-size: 10px;
   font-weight: 900;
-  letter-spacing: .4px;
 }
 
 .lesson.cancelled .lesson-bar {
@@ -299,11 +305,6 @@ button:active {
   background: #fff0c2;
 }
 
-.lesson.new-event .lesson-status {
-  color: #176b43;
-  background: #dff8e9;
-}
-
 .empty {
   padding: 30px 10px;
   text-align: center;
@@ -318,12 +319,6 @@ button:active {
   width: 100%;
   margin-top: 12px;
   font-size: 12px;
-}
-
-.notice {
-  padding: 13px;
-  border-radius: 12px;
-  background: var(--purple-light);
 }
 
 footer {
@@ -348,7 +343,6 @@ body.dark {
   --muted: #aaa5bd;
   --line: #353148;
   --purple-light: #302849;
-  --red-light: #3a2029;
 }
 
 body.dark header {
@@ -368,10 +362,6 @@ body.dark .dashboard > div:not(:first-child) {
   background: #201e31;
 }
 
-body.dark .notice {
-  background: #302849;
-}
-
 body.dark .lesson.cancelled .lesson-status {
   background: #a9233b;
 }
@@ -381,16 +371,10 @@ body.dark .lesson.changed .lesson-status {
   color: #ffe3a0;
 }
 
-body.dark .lesson.new-event .lesson-status {
-  background: #164d34;
-  color: #b6f3ce;
-}
-
 [hidden] {
   display: none !important;
 }
 
-/* MOBIEL */
 @media (max-width: 420px) {
   main {
     width: calc(100% - 20px);
@@ -411,7 +395,7 @@ body.dark .lesson.new-event .lesson-status {
   }
 
   .lesson {
-    grid-template-columns: 51px 4px minmax(0, 1fr);
-    gap: 9px;
+    grid-template-columns: 70px 4px minmax(0, 1fr);
+    gap: 8px;
   }
 }
