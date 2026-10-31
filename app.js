@@ -510,53 +510,7 @@ $("icsFile").addEventListener("change", async e => {
   e.target.value = "";
 });
 
-// VOORBEELDROOSTER
-function demoEvents() {
-  const monday = startOfWeek(new Date());
-
-  const data = [
-    ["08:45", "09:35", "Nederlands", "Lokaal 1.08"],
-    ["09:35", "10:25", "Wiskunde", "Lokaal 2.14"],
-    ["10:45", "11:35", "Engels", "Lokaal 1.12"],
-    ["11:35", "12:25", "Biologie", "Lokaal 0.06"],
-    ["13:15", "14:05", "Geschiedenis", "Lokaal 2.02"],
-    ["14:05", "14:55", "Informatica", "Lokaal 3.01"]
-  ];
-
-  return data.map((x, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + (i < 4 ? 0 : 1));
-
-    const [sh, sm] = x[0].split(":").map(Number);
-    const [eh, em] = x[1].split(":").map(Number);
-
-    const start = new Date(d);
-    start.setHours(sh, sm, 0, 0);
-
-    const end = new Date(d);
-    end.setHours(eh, em, 0, 0);
-
-    return {
-      start,
-      end,
-      summary: x[2],
-      location: x[3],
-      description: "",
-      status: "",
-      uid: "",
-      cancelled: false,
-      changeLabel: ""
-    };
-  });
-}
-
-$("demoBtn").onclick = async () => {
-  events = demoEvents();
-  selectedDate = new Date();
-  render();
-  await saveRoster();
-};
-
+// VANDAAG
 $("todayBtn").onclick = () => {
   selectedDate = new Date();
   render();
@@ -604,7 +558,7 @@ $("installBtn").onclick = async () => {
 
 // SERVICE WORKER
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
-  navigator.serviceWorker.register("./sw.js?v=5")
+  navigator.serviceWorker.register("./sw.js?v=6")
     .catch(console.error);
 }
 
