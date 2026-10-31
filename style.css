@@ -10,6 +10,8 @@
   --text: #24233a;
   --muted: #858399;
   --line: #eceaf3;
+  --red: #d92d45;
+  --red-light: #fff0f1;
 }
 
 * {
@@ -176,36 +178,22 @@ button:active {
   color: var(--purple);
 }
 
-/* WEEKNAVIGATIE */
+/* WEEK EN DAGTABS */
+.swipe-hint {
+  margin: 0 0 8px;
+  font-size: 11px;
+  text-align: center;
+}
+
 #weekTabs {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 6px;
   padding: 5px 0 14px;
+  touch-action: pan-y;
+  user-select: none;
 }
 
-.week-navigation {
-  grid-column: 1 / -1;
-  display: flex;
-  width: 100%;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  margin-bottom: 12px;
-}
-
-.week-navigation strong {
-  text-align: center;
-  font-size: 12px;
-}
-
-.week-navigation button {
-  flex-shrink: 0;
-  padding: 9px 8px;
-  font-size: 12px;
-}
-
-/* DAGEN */
 .day-tab {
   width: 100%;
   min-width: 0;
@@ -260,7 +248,7 @@ button:active {
 }
 
 .lesson-bar {
-  height: 43px;
+  min-height: 43px;
   border-radius: 8px;
   background: var(--purple);
 }
@@ -275,10 +263,45 @@ button:active {
   margin-top: 5px;
   color: var(--muted);
   font-size: 12px;
+  overflow-wrap: anywhere;
 }
 
-.lesson-tag {
-  display: none;
+.lesson-status {
+  grid-column: 3;
+  justify-self: start;
+  margin-top: 5px;
+  padding: 5px 8px;
+  border-radius: 7px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .4px;
+}
+
+.lesson.cancelled .lesson-bar {
+  background: var(--red);
+  opacity: .5;
+}
+
+.lesson.cancelled .lesson-name,
+.lesson.cancelled .lesson-time,
+.lesson.cancelled .lesson-meta {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.lesson.cancelled .lesson-status {
+  color: white;
+  background: var(--red);
+}
+
+.lesson.changed .lesson-status {
+  color: #754c00;
+  background: #fff0c2;
+}
+
+.lesson.new-event .lesson-status {
+  color: #176b43;
+  background: #dff8e9;
 }
 
 .empty {
@@ -325,6 +348,7 @@ body.dark {
   --muted: #aaa5bd;
   --line: #353148;
   --purple-light: #302849;
+  --red-light: #3a2029;
 }
 
 body.dark header {
@@ -348,11 +372,25 @@ body.dark .notice {
   background: #302849;
 }
 
+body.dark .lesson.cancelled .lesson-status {
+  background: #a9233b;
+}
+
+body.dark .lesson.changed .lesson-status {
+  background: #55421b;
+  color: #ffe3a0;
+}
+
+body.dark .lesson.new-event .lesson-status {
+  background: #164d34;
+  color: #b6f3ce;
+}
+
 [hidden] {
   display: none !important;
 }
 
-/* MOBIELE WEERGAVE */
+/* MOBIEL */
 @media (max-width: 420px) {
   main {
     width: calc(100% - 20px);
@@ -375,14 +413,5 @@ body.dark .notice {
   .lesson {
     grid-template-columns: 51px 4px minmax(0, 1fr);
     gap: 9px;
-  }
-
-  .week-navigation {
-    gap: 5px;
-  }
-
-  .week-navigation button {
-    padding: 9px 6px;
-    font-size: 11px;
   }
 }
