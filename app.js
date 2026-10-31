@@ -15,6 +15,7 @@ let selectedDate = new Date();
 let deferredPrompt = null;
 let currentUserId = null;
 
+// ROOSTER LADEN
 async function checkLogin() {
   const { data, error } = await supabaseClient.auth.getSession();
 
@@ -43,7 +44,6 @@ function showAccount(session) {
   }
 }
 
-// ROOSTER LADEN UIT SUPABASE
 async function loadRoster() {
   if (!currentUserId) return;
 
@@ -62,7 +62,8 @@ async function loadRoster() {
 
   if (!data) {
     events = [];
-    $("importStatus").textContent = "Nog geen opgeslagen rooster. Importeer een ICS-bestand.";
+    $("importStatus").textContent =
+      "Nog geen opgeslagen rooster. Importeer een ICS-bestand.";
     render();
     return;
   }
@@ -83,7 +84,7 @@ async function loadRoster() {
   render();
 }
 
-// ROOSTER OPSLAAN IN SUPABASE
+// ROOSTER OPSLAAN
 async function saveRoster() {
   if (!currentUserId) {
     $("importStatus").textContent = "Log in om je rooster op te slaan.";
@@ -139,12 +140,14 @@ $("signupBtn").onclick = async () => {
   const password = $("authPassword").value;
 
   if (!email || !password) {
-    $("authStatus").textContent = "Vul je e-mailadres en wachtwoord in.";
+    $("authStatus").textContent =
+      "Vul je e-mailadres en wachtwoord in.";
     return;
   }
 
   if (password.length < 6) {
-    $("authStatus").textContent = "Je wachtwoord moet minimaal 6 tekens bevatten.";
+    $("authStatus").textContent =
+      "Je wachtwoord moet minimaal 6 tekens bevatten.";
     return;
   }
 
@@ -189,14 +192,12 @@ $("logoutBtn").onclick = async () => {
   $("authStatus").textContent = "Je bent uitgelogd.";
 };
 
-// AUTHENTICATIE VERANDERINGEN
+// AUTHENTICATIE
 supabaseClient.auth.onAuthStateChange((event, session) => {
   showAccount(session);
 
   if (event === "SIGNED_IN" && session) {
     currentUserId = session.user.id;
-
-    // Laden buiten de auth-callback om
     setTimeout(() => loadRoster(), 0);
   }
 
@@ -209,9 +210,7 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
 // VOORBEELDROOSTER
 const demoEvents = () => {
   const now = new Date();
-  const monday = new Date(now);
-
-  monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+  const monday = startOfWeek(now);
 
   const data = [
     ["08:30", "09:20", "Nederlands", "Lokaal 1.08"],
@@ -265,6 +264,45 @@ function render() {
   const week = startOfWeek(selectedDate);
   $("weekTabs").innerHTML = "";
 
+  // WEEKNAVIGATIE
+  const nav = document.createElement("div");
+  nav.style.cssText =
+    "display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px;";
+
+  const prev = document.createElement("button");
+  prev.textContent = "← Vorige";
+  prev.onclick = () => {
+    selectedDate.setDate(selectedDate.getDate() - 7);
+    render();
+  };
+
+  const label = document.createElement("strong");
+  label.textContent = "Week van " +
+    week.toLocaleDateString("nl-NL", {
+      day: "numeric",
+      month: "short"
+    });
+
+  const nextWeek = document.createElement("button");
+  nextWeek.textContent = "Volgende →";
+  nextWeek.onclick = () => {
+    selectedDate.setDate(selectedDate.getDate() + 7);
+    render();
+  };
+
+  $("weekTabs").append(nav);
+  nav.append(prev, label, nextWeek);
+
+  // TERUG NAAR VANDAAG
+  const today = document.createElement("button");
+  today.textContent = "Vandaag";
+  today.onclick = () => {
+    selectedDate = new Date();
+    render();
+  };
+  $("weekTabs").append(today);
+
+  // DAGEN
   for (let i = 0; i < 5; i++) {
     const d = new Date(week);
     d.setDate(week.getDate() + i);
@@ -309,7 +347,8 @@ function render() {
   area.innerHTML = "";
 
   if (!todays.length) {
-    area.innerHTML = '<div class="empty"><div class="empty-icon">☀️</div><h3>Geen lessen gevonden</h3><p class="muted">Er staan geen lessen op deze dag in je rooster.</p></div>';
+    area.innerHTML =
+      '<div class="empty"><div class="empty-icon">☀️</div><h3>Geen lessen gevonden</h3><p class="muted">Er staan geen lessen op deze dag in je rooster.</p></div>';
     return;
   }
 
@@ -317,7 +356,8 @@ function render() {
     const row = document.createElement("div");
     row.className = "lesson";
 
-    row.innerHTML = `<div class="lesson-time">${fmtTime(e.start)}<br><span class="muted">${fmtTime(e.end)}</span></div><div class="lesson-bar"></div><div><div class="lesson-name"></div><div class="lesson-meta"></div></div><span class="lesson-tag">Les</span>`;
+    row.innerHTML =
+      `<div class="lesson-time">${fmtTime(e.start)}<br><span class="muted">${fmtTime(e.end)}</span></div><div class="lesson-bar"></div><div><div class="lesson-name"></div><div class="lesson-meta"></div></div><span class="lesson-tag">Les</span>`;
 
     row.querySelector(".lesson-name").textContent = e.summary;
     row.querySelector(".lesson-meta").textContent =
@@ -385,7 +425,7 @@ function parseICS(text) {
   return parsed;
 }
 
-// ICS IMPORTEREN EN OPSLAAN
+// ICS IMPORTEREN
 $("icsFile").addEventListener("change", async e => {
   const file = e.target.files[0];
   if (!file) return;
@@ -402,7 +442,6 @@ $("icsFile").addEventListener("change", async e => {
     selectedDate = events[0].start;
 
     render();
-
     await saveRoster();
   } catch (err) {
     $("importStatus").textContent =
@@ -410,13 +449,12 @@ $("icsFile").addEventListener("change", async e => {
   }
 });
 
-// VOORBEELDROOSTER LADEN EN OPSLAAN
+// VOORBEELDROOSTER
 $("demoBtn").onclick = async () => {
   events = demoEvents();
   selectedDate = new Date();
 
   render();
-
   await saveRoster();
 };
 
