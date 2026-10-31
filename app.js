@@ -1,7 +1,6 @@
 
 const SUPABASE_URL = "https://pakdmubgnaowikhztnip.supabase.co";
 const SUPABASE_KEY = "sb_publishable_dqTBWx0eJGY72D6b2v-oDw_aPMmJTBp";
-
 const REDIRECT_URL = "https://137399-max.github.io/Roostercheck/";
 
 const supabaseClient = window.supabase.createClient(
@@ -14,6 +13,7 @@ const $ = (id) => document.getElementById(id);
 let events = [];
 let selectedDate = new Date();
 let deferredPrompt = null;
+let currentUserId = null;
 
 async function checkLogin() {
   const { data, error } = await supabaseClient.auth.getSession();
@@ -24,6 +24,11 @@ async function checkLogin() {
   }
 
   showAccount(data.session);
+
+  if (data.session) {
+    currentUserId = data.session.user.id;
+    await loadRoster();
+  }
 }
 
 function showAccount(session) {
@@ -33,10 +38,83 @@ function showAccount(session) {
 
   if (session) {
     $("userEmail").textContent = "Ingelogd als " + session.user.email;
-    $("authStatus").textContent = "";
+  } else {
+    currentUserId = null;
   }
 }
 
+// ROOSTER LADEN UIT SUPABASE
+async function loadRoster() {
+  if (!currentUserId) return;
+
+  $("importStatus").textContent = "Je rooster laden...";
+
+  const { data, error } = await supabaseClient
+    .from("roosters")
+    .select("events")
+    .eq("user_id", currentUserId)
+    .maybeSingle();
+
+  if (error) {
+    $("importStatus").textContent = "Rooster laden mislukt: " + error.message;
+    return;
+  }
+
+  if (!data) {
+    events = [];
+    $("importStatus").textContent = "Nog geen opgeslagen rooster. Importeer een ICS-bestand.";
+    render();
+    return;
+  }
+
+  events = (data.events || []).map(e => ({
+    ...e,
+    start: new Date(e.start),
+    end: new Date(e.end)
+  }));
+
+  if (events.length) {
+    selectedDate = events[0].start;
+    $("importStatus").textContent = "Je opgeslagen rooster is geladen!";
+  } else {
+    $("importStatus").textContent = "Je opgeslagen rooster is leeg.";
+  }
+
+  render();
+}
+
+// ROOSTER OPSLAAN IN SUPABASE
+async function saveRoster() {
+  if (!currentUserId) {
+    $("importStatus").textContent = "Log in om je rooster op te slaan.";
+    return;
+  }
+
+  const savedEvents = events.map(e => ({
+    ...e,
+    start: e.start.toISOString(),
+    end: e.end.toISOString()
+  }));
+
+  const { error } = await supabaseClient
+    .from("roosters")
+    .upsert({
+      user_id: currentUserId,
+      events: savedEvents,
+      updated_at: new Date().toISOString()
+    }, {
+      onConflict: "user_id"
+    });
+
+  if (error) {
+    $("importStatus").textContent = "Opslaan mislukt: " + error.message;
+    return;
+  }
+
+  $("importStatus").textContent = "Je rooster is online opgeslagen!";
+}
+
+// INLOGGEN
 $("authForm").addEventListener("submit", async (e) => {
   e.preventDefault();
 
@@ -55,6 +133,7 @@ $("authForm").addEventListener("submit", async (e) => {
     : "Je bent ingelogd!";
 });
 
+// ACCOUNT AANMAKEN
 $("signupBtn").onclick = async () => {
   const email = $("authEmail").value.trim();
   const password = $("authPassword").value;
@@ -84,6 +163,7 @@ $("signupBtn").onclick = async () => {
     : "Account aangemaakt! Controleer je e-mail om te bevestigen.";
 };
 
+// GOOGLE INLOGGEN
 $("googleBtn").onclick = async () => {
   const { error } = await supabaseClient.auth.signInWithOAuth({
     provider: "google",
@@ -95,21 +175,42 @@ $("googleBtn").onclick = async () => {
   if (error) $("authStatus").textContent = error.message;
 };
 
+// UITLOGGEN
 $("logoutBtn").onclick = async () => {
   const { error } = await supabaseClient.auth.signOut();
 
-  $("authStatus").textContent = error
-    ? error.message
-    : "Je bent uitgelogd.";
+  if (error) {
+    $("authStatus").textContent = error.message;
+    return;
+  }
+
+  events = [];
+  render();
+  $("authStatus").textContent = "Je bent uitgelogd.";
 };
 
-supabaseClient.auth.onAuthStateChange((_event, session) => {
+// AUTHENTICATIE VERANDERINGEN
+supabaseClient.auth.onAuthStateChange((event, session) => {
   showAccount(session);
+
+  if (event === "SIGNED_IN" && session) {
+    currentUserId = session.user.id;
+
+    // Laden buiten de auth-callback om
+    setTimeout(() => loadRoster(), 0);
+  }
+
+  if (event === "SIGNED_OUT") {
+    events = [];
+    render();
+  }
 });
 
+// VOORBEELDROOSTER
 const demoEvents = () => {
   const now = new Date();
   const monday = new Date(now);
+
   monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
 
   const data = [
@@ -159,6 +260,7 @@ function sameDay(a, b) {
   return a.toDateString() === b.toDateString();
 }
 
+// ROOSTER WEERGEVEN
 function render() {
   const week = startOfWeek(selectedDate);
   $("weekTabs").innerHTML = "";
@@ -168,8 +270,14 @@ function render() {
     d.setDate(week.getDate() + i);
 
     const b = document.createElement("button");
-    b.className = "day-tab" + (sameDay(d, selectedDate) ? " selected" : "");
-    b.innerHTML = `<strong>${d.toLocaleDateString("nl-NL", { weekday: "short" })}</strong><span>${d.getDate()} ${d.toLocaleDateString("nl-NL", { month: "short" })}</span>`;
+    b.className = "day-tab" +
+      (sameDay(d, selectedDate) ? " selected" : "");
+
+    b.innerHTML = `<strong>${d.toLocaleDateString("nl-NL", {
+      weekday: "short"
+    })}</strong><span>${d.getDate()} ${d.toLocaleDateString("nl-NL", {
+      month: "short"
+    })}</span>`;
 
     b.onclick = () => {
       selectedDate = d;
@@ -190,7 +298,9 @@ function render() {
     .filter(e => e.end > new Date())
     .sort((a, b) => a.start - b.start)[0];
 
-  $("nextSubject").textContent = next?.summary || "Geen komende les";
+  $("nextSubject").textContent =
+    next?.summary || "Geen komende les";
+
   $("nextInfo").textContent = next
     ? `${fmtTime(next.start)} · ${next.location || "Lokaal onbekend"}`
     : "Je rooster is bijgewerkt";
@@ -206,6 +316,7 @@ function render() {
   todays.forEach(e => {
     const row = document.createElement("div");
     row.className = "lesson";
+
     row.innerHTML = `<div class="lesson-time">${fmtTime(e.start)}<br><span class="muted">${fmtTime(e.end)}</span></div><div class="lesson-bar"></div><div><div class="lesson-name"></div><div class="lesson-meta"></div></div><span class="lesson-tag">Les</span>`;
 
     row.querySelector(".lesson-name").textContent = e.summary;
@@ -216,6 +327,7 @@ function render() {
   });
 }
 
+// ICS BESTAND LEZEN
 function parseICS(text) {
   const unfolded = text.replace(/\r?\n[ \t]/g, "");
   const blocks = unfolded.split("BEGIN:VEVENT").slice(1);
@@ -224,7 +336,9 @@ function parseICS(text) {
   for (const block of blocks) {
     const get = (key) => {
       const line = block.split(/\r?\n/).find(l => l.startsWith(key));
-      return line ? line.substring(line.indexOf(":") + 1).trim() : "";
+      return line
+        ? line.substring(line.indexOf(":") + 1).trim()
+        : "";
     };
 
     const dt = (key) => {
@@ -241,7 +355,10 @@ function parseICS(text) {
         );
       }
 
-      const m = raw.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})?Z?$/);
+      const m = raw.match(
+        /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})?Z?$/
+      );
+
       if (!m) return null;
 
       return new Date(
@@ -257,7 +374,9 @@ function parseICS(text) {
       parsed.push({
         start,
         end,
-        summary: get("SUMMARY").replace(/\\,/g, ",").replace(/\\n/g, " "),
+        summary: get("SUMMARY")
+          .replace(/\\,/g, ",")
+          .replace(/\\n/g, " "),
         location: get("LOCATION").replace(/\\,/g, ",")
       });
     }
@@ -266,6 +385,7 @@ function parseICS(text) {
   return parsed;
 }
 
+// ICS IMPORTEREN EN OPSLAAN
 $("icsFile").addEventListener("change", async e => {
   const file = e.target.files[0];
   if (!file) return;
@@ -281,30 +401,32 @@ $("icsFile").addEventListener("change", async e => {
     events = parsed;
     selectedDate = events[0].start;
 
-    $("importStatus").textContent =
-      `${events.length} afspraken geïmporteerd uit ${file.name}.`;
-
     render();
+
+    await saveRoster();
   } catch (err) {
-    $("importStatus").textContent = "Import mislukt: " + err.message;
+    $("importStatus").textContent =
+      "Import mislukt: " + err.message;
   }
 });
 
-$("demoBtn").onclick = () => {
+// VOORBEELDROOSTER LADEN EN OPSLAAN
+$("demoBtn").onclick = async () => {
   events = demoEvents();
   selectedDate = new Date();
 
-  $("importStatus").textContent =
-    "Voorbeeldrooster geladen. Dit zijn fictieve lessen.";
-
   render();
+
+  await saveRoster();
 };
 
+// VANDAAG
 $("todayBtn").onclick = () => {
   selectedDate = new Date();
   render();
 };
 
+// DONKERE MODUS
 $("themeBtn").onclick = () => {
   document.body.classList.toggle("dark");
 
@@ -318,12 +440,15 @@ if (localStorage.getItem("rc-theme") === "dark") {
   document.body.classList.add("dark");
 }
 
-$("todayLabel").textContent = new Date().toLocaleDateString("nl-NL", {
-  weekday: "long",
-  day: "numeric",
-  month: "long"
-}).toUpperCase();
+// DATUM
+$("todayLabel").textContent =
+  new Date().toLocaleDateString("nl-NL", {
+    weekday: "long",
+    day: "numeric",
+    month: "long"
+  }).toUpperCase();
 
+// APP INSTALLEREN
 window.addEventListener("beforeinstallprompt", e => {
   e.preventDefault();
   deferredPrompt = e;
@@ -340,8 +465,11 @@ $("installBtn").onclick = async () => {
   $("installBtn").hidden = true;
 };
 
+// SERVICE WORKER
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
-  navigator.serviceWorker.register("./sw.js").catch(console.error);
+  navigator.serviceWorker
+    .register("./sw.js")
+    .catch(console.error);
 }
 
 render();
