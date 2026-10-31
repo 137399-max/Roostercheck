@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#635bff">
+  <meta name="description" content="Roostercheck - jouw schoolrooster overzichtelijk bij elkaar.">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="style.css">
+  <title>Roostercheck</title>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="Roostercheck home"><span class="brand-mark">R</span> Roostercheck</a>
+    <button id="themeBtn" class="icon-btn" aria-label="Wissel licht/donker thema">☾</button>
+  </header>
+
+  <main class="shell">
+    <section class="welcome">
+      <div>
+        <p class="eyebrow" id="todayLabel">JOUW SCHOOLROOSTER</p>
+        <h1>Hoi! 👋</h1>
+        <p class="muted">Alles voor je schooldag op één plek.</p>
+      </div>
+      <button id="installBtn" class="primary" hidden>Installeer app</button>
+    </section>
+
+    <section class="summary-grid">
+      <article class="summary-card accent">
+        <span class="card-label">Eerstvolgende les</span>
+        <strong id="nextSubject">Nog geen rooster</strong>
+        <span id="nextInfo" class="small">Voeg je rooster toe om te beginnen</span>
+      </article>
+      <article class="summary-card">
+        <span class="card-label">Lessen vandaag</span>
+        <strong id="lessonCount">0</strong>
+        <span class="small muted">Volgens je huidige rooster</span>
+      </article>
+    </section>
+
+    <section class="panel">
+      <div class="section-heading">
+        <div><p class="eyebrow">PLANNING</p><h2>Deze week</h2></div>
+        <button id="todayBtn" class="secondary">Vandaag</button>
+      </div>
+      <div id="weekTabs" class="week-tabs" aria-label="Kies een dag"></div>
+      <div id="schedule" class="schedule">
+        <div class="empty">
+          <div class="empty-icon">📚</div>
+          <h3>Je rooster staat hier</h3>
+          <p class="muted">Importeer een .ics-roosterbestand of bekijk het voorbeeldrooster.</p>
+          <button id="demoBtn" class="primary">Bekijk voorbeeldrooster</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel settings">
+      <div class="section-heading"><div><p class="eyebrow">JOUW GEGEVENS</p><h2>Rooster toevoegen</h2></div></div>
+      <p class="muted">Begin met een iCal/ICS-export uit je schoolportaal. Je bestand wordt alleen in deze browser verwerkt.</p>
+      <label class="file-picker">
+        <span>📅 Kies ICS-bestand</span>
+        <input id="icsFile" type="file" accept=".ics,text/calendar">
+      </label>
+      <p id="importStatus" class="small muted" aria-live="polite">Nog geen bestand geïmporteerd.</p>
+      <div class="notice">
+        <strong>Even opletten</strong>
+        <p>Een persoonlijke Zermelo iCal-link is privé. Deel die niet openbaar. Live synchronisatie via een link komt pas in een latere versie met een beveiligde server.</p>
+      </div>
+      <div class="notice">
+        <strong>Magister</strong>
+        <p>Een officiële Magister API is niet vrij beschikbaar voor willekeurige apps. Roostercheck vraagt daarom nooit om je Magister-wachtwoord.</p>
+      </div>
+    </section>
+
+    <footer>Roostercheck · Gratis schoolrooster · Onafhankelijk hobbyproject</footer>
+  </main>
+  <nav class="bottom-nav">
+    <a class="active" href="#schedule">⌂ <span>Rooster</span></a>
+    <a href="#settings">⚙ <span>Instellingen</span></a>
+  </nav>
+  <script src="app.js"></script>
+</body>
+</html>
