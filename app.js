@@ -160,7 +160,7 @@ $("signupBtn").onclick = async () => {
     : "Account aangemaakt! Controleer je e-mail.";
 };
 
-// GOOGLE
+// GOOGLE LOGIN
 $("googleBtn").onclick = async () => {
   const { error } = await supabaseClient.auth.signInWithOAuth({
     provider: "google",
@@ -207,11 +207,12 @@ function startOfWeek(date) {
   return d;
 }
 
-function atTime(date, time) {
-  const [h, m] = time.split(":").map(Number);
-  const d = new Date(date);
-  d.setHours(h, m, 0, 0);
-  return d;
+function sameDay(a, b) {
+  return a.toLocaleDateString("en-CA", {
+    timeZone: "Europe/Amsterdam"
+  }) === b.toLocaleDateString("en-CA", {
+    timeZone: "Europe/Amsterdam"
+  });
 }
 
 function fmtTime(date) {
@@ -222,77 +223,155 @@ function fmtTime(date) {
   });
 }
 
-function sameDay(a, b) {
-  return a.toLocaleDateString("en-CA", {
-    timeZone: "Europe/Amsterdam"
-  }) === b.toLocaleDateString("en-CA", {
-    timeZone: "Europe/Amsterdam"
-  });
+// ICS-DATUM PARSEN
+function parseICSDate(line) {
+  if (!line) return null;
+
+  const colon = line.indexOf(":");
+  if (colon === -1) return null;
+
+  const header = line.substring(0, colon);
+  const raw = line.substring(colon + 1).trim();
+
+  const match = raw.match(
+    /^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})?(Z)?)?$/
+  );
+
+  if (!match) return null;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]) - 1;
+  const day = Number(match[3]);
+
+  // Datum zonder tijd
+  if (!match[4]) {
+    return new Date(year, month, day);
+  }
+
+  const hour = Number(match[4]);
+  const minute = Number(match[5]);
+  const second = Number(match[6] || 0);
+
+  // Z betekent UTC
+  if (match[7] === "Z") {
+    return new Date(Date.UTC(
+      year, month, day, hour, minute, second
+    ));
+  }
+
+  // Datum zonder Z: lokale tijd.
+  // Zermelo-export met TZID=Europe/Amsterdam wordt hiermee
+  // ook als Nederlandse lokale tijd ingelezen.
+  return new Date(year, month, day, hour, minute, second);
 }
 
-// VOORBEELDROOSTER
-function demoEvents() {
-  const monday = startOfWeek(new Date());
+// ICS TEKST NORMALISEREN
+function unfoldICS(text) {
+  return text.replace(/\r?\n[ \t]/g, "");
+}
 
-  const data = [
-    ["08:30", "09:20", "Nederlands", "Lokaal 1.08"],
-    ["09:20", "10:10", "Wiskunde", "Lokaal 2.14"],
-    ["10:30", "11:20", "Engels", "Lokaal 1.12"],
-    ["11:20", "12:10", "Biologie", "Lokaal 0.06"],
-    ["13:00", "13:50", "Geschiedenis", "Lokaal 2.02"],
-    ["13:50", "14:40", "Informatica", "Lokaal 3.01"]
-  ];
+function unescapeICS(value) {
+  return value
+    .replace(/\\n/gi, " ")
+    .replace(/\\,/g, ",")
+    .replace(/\\;/g, ";")
+    .replace(/\\\\/g, "\\")
+    .trim();
+}
 
-  return data.map((x, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + (i < 4 ? 0 : 1));
+// ICS IMPORTEREN
+function parseICS(text) {
+  const unfolded = unfoldICS(text);
+  const blocks = unfolded.split("BEGIN:VEVENT").slice(1);
+  const parsed = [];
 
-    return {
-      start: atTime(d, x[0]),
-      end: atTime(d, x[1]),
-      summary: x[2],
-      location: x[3]
+  for (const block of blocks) {
+    const lines = block.split(/\r?\n/);
+
+    const findLine = name =>
+      lines.find(line => line.startsWith(name + ":") ||
+        line.startsWith(name + ";"));
+
+    const getValue = name => {
+      const line = findLine(name);
+      if (!line) return "";
+
+      const colon = line.indexOf(":");
+      return unescapeICS(line.substring(colon + 1));
     };
-  });
+
+    const start = parseICSDate(findLine("DTSTART"));
+    const end = parseICSDate(findLine("DTEND"));
+
+    if (!start || !end) continue;
+
+    const summary = getValue("SUMMARY");
+    const description = getValue("DESCRIPTION");
+    const status = getValue("STATUS").toUpperCase();
+    const uid = getValue("UID");
+    const location = getValue("LOCATION");
+    const combined = `${summary} ${description}`.toLowerCase();
+
+    const cancelled =
+      status === "CANCELLED" ||
+      /\[x\]/i.test(summary) ||
+      combined.includes("les vervalt") ||
+      combined.includes("les vervallen") ||
+      combined.includes("les gaat niet door");
+
+    let changeLabel = "";
+
+    if (cancelled) {
+      changeLabel = "VERVALLEN";
+    } else if (
+      combined.includes("lokaal gewijzigd") ||
+      combined.includes("ander lokaal")
+    ) {
+      changeLabel = "LOKAAL GEWIJZIGD";
+    } else if (
+      combined.includes("docent gewijzigd") ||
+      combined.includes("andere docent")
+    ) {
+      changeLabel = "DOCENT GEWIJZIGD";
+    } else if (
+      combined.includes("verplaatst") ||
+      combined.includes("tijd gewijzigd")
+    ) {
+      changeLabel = "VERPLAATST";
+    } else if (description.toLowerCase().includes("wijzigingen:")) {
+      changeLabel = "GEWIJZIGD";
+    }
+
+    parsed.push({
+      start,
+      end,
+      summary: summary.replace(/^\[x\]\s*/i, ""),
+      location,
+      description,
+      status,
+      uid,
+      cancelled,
+      changeLabel
+    });
+  }
+
+  return parsed;
 }
 
-// ROOSTER WEERGEVEN
+// WEEK EN DAGEN WEERGEVEN
 function render() {
   const week = startOfWeek(selectedDate);
   const tabs = $("weekTabs");
   tabs.innerHTML = "";
 
-  // WEEKNAVIGATIE
-  const nav = document.createElement("div");
-  nav.className = "week-navigation";
-
-  const prev = document.createElement("button");
-  prev.textContent = "← Vorige";
-  prev.onclick = () => {
-    selectedDate.setDate(selectedDate.getDate() - 7);
-    render();
-  };
-
-  const label = document.createElement("strong");
-  label.textContent = "Week van " +
-    week.toLocaleDateString("nl-NL", {
+  $("weekTitle").textContent =
+    "Week van " + week.toLocaleDateString("nl-NL", {
       day: "numeric",
       month: "short",
-      year: "numeric",
-      timeZone: "Europe/Amsterdam"
+      year: "numeric"
     });
 
-  const nextWeek = document.createElement("button");
-  nextWeek.textContent = "Volgende →";
-  nextWeek.onclick = () => {
-    selectedDate.setDate(selectedDate.getDate() + 7);
-    render();
-  };
-
-  nav.append(prev, label, nextWeek);
-  tabs.append(nav);
-
-  // DAGKNOPPEN: MAANDAG T/M ZONDAG
+  // DAGKNOPPEN
   for (let i = 0; i < 7; i++) {
     const d = new Date(week);
     d.setDate(week.getDate() + i);
@@ -301,13 +380,22 @@ function render() {
     button.className = "day-tab" +
       (sameDay(d, selectedDate) ? " selected" : "");
 
-    button.innerHTML = `<strong>${d.toLocaleDateString("nl-NL", {
-      weekday: "short",
-      timeZone: "Europe/Amsterdam"
-    })}</strong><span>${d.getDate()} ${d.toLocaleDateString("nl-NL", {
-      month: "short",
-      timeZone: "Europe/Amsterdam"
-    })}</span>`;
+    const weekday = d.toLocaleDateString("nl-NL", {
+      weekday: "short"
+    });
+
+    const dateLabel = d.toLocaleDateString("nl-NL", {
+      day: "numeric",
+      month: "short"
+    });
+
+    const strong = document.createElement("strong");
+    strong.textContent = weekday;
+
+    const span = document.createElement("span");
+    span.textContent = dateLabel;
+
+    button.append(strong, span);
 
     button.onclick = () => {
       selectedDate = d;
@@ -317,16 +405,19 @@ function render() {
     tabs.append(button);
   }
 
-  // LESSEN
+  // LESSEN VAN DE GESELECTEERDE DAG
   const todays = events
     .filter(e => sameDay(e.start, selectedDate))
     .sort((a, b) => a.start - b.start);
 
-  $("lessonCount").textContent =
-    events.filter(e => sameDay(e.start, new Date())).length;
+  const todaysCount = events.filter(e =>
+    sameDay(e.start, new Date()) && !e.cancelled
+  ).length;
+
+  $("lessonCount").textContent = todaysCount;
 
   const upcoming = events
-    .filter(e => e.end > new Date())
+    .filter(e => !e.cancelled && e.end > new Date())
     .sort((a, b) => a.start - b.start)[0];
 
   $("nextSubject").textContent =
@@ -340,8 +431,11 @@ function render() {
   area.innerHTML = "";
 
   if (!todays.length) {
-    area.innerHTML =
-      '<div class="empty"><div class="empty-icon">☀️</div><h3>Geen lessen gevonden</h3><p>Er staan geen lessen op deze dag.</p></div>';
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.innerHTML =
+      '<div class="empty-icon">☀️</div><h3>Geen lessen gevonden</h3><p>Er staan geen lessen op deze dag.</p>';
+    area.append(empty);
     return;
   }
 
@@ -349,106 +443,76 @@ function render() {
     const row = document.createElement("div");
     row.className = "lesson";
 
-    row.innerHTML =
-      `<div class="lesson-time">${fmtTime(e.start)}<br><span class="muted">${fmtTime(e.end)}</span></div><div class="lesson-bar"></div><div><div class="lesson-name"></div><div class="lesson-meta"></div></div><span class="lesson-tag">Les</span>`;
+    if (e.cancelled) row.classList.add("cancelled");
+    else if (e.changeLabel) row.classList.add("changed");
 
-    row.querySelector(".lesson-name").textContent = e.summary;
-    row.querySelector(".lesson-meta").textContent =
-      e.location || "Lokaal niet vermeld";
+    const time = document.createElement("div");
+    time.className = "lesson-time";
+    time.textContent = `${fmtTime(e.start)} – ${fmtTime(e.end)}`;
+
+    const bar = document.createElement("div");
+    bar.className = "lesson-bar";
+
+    const details = document.createElement("div");
+
+    const name = document.createElement("div");
+    name.className = "lesson-name";
+    name.textContent = e.summary;
+
+    const meta = document.createElement("div");
+    meta.className = "lesson-meta";
+    meta.textContent = e.location || "Lokaal niet vermeld";
+
+    details.append(name, meta);
+    row.append(time, bar, details);
+
+    if (e.changeLabel) {
+      const status = document.createElement("div");
+      status.className = "lesson-status";
+      status.textContent = e.changeLabel;
+      row.append(status);
+    }
 
     area.append(row);
   });
 }
 
-// ICS DATUM CORRECT INLEZEN
-function parseICSDate(line) {
-  if (!line) return null;
+// SWIPEN OM VAN WEEK TE WISSELEN
+let touchStartX = 0;
+let touchStartY = 0;
 
-  const colon = line.indexOf(":");
-  if (colon === -1) return null;
+$("weekTabs").addEventListener("touchstart", e => {
+  if (!e.touches.length) return;
 
-  const raw = line.substring(colon + 1).trim();
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+}, { passive: true });
 
-  // Datum zonder tijd
-  const dateOnly = raw.match(/^(\d{4})(\d{2})(\d{2})$/);
+$("weekTabs").addEventListener("touchend", e => {
+  if (!e.changedTouches.length) return;
 
-  if (dateOnly) {
-    return new Date(
-      Number(dateOnly[1]),
-      Number(dateOnly[2]) - 1,
-      Number(dateOnly[3])
-    );
+  const deltaX = e.changedTouches[0].clientX - touchStartX;
+  const deltaY = e.changedTouches[0].clientY - touchStartY;
+
+  // Alleen een duidelijke horizontale swipe telt.
+  if (Math.abs(deltaX) < 50 || Math.abs(deltaX) < Math.abs(deltaY) * 1.3) {
+    return;
   }
 
-  // Datum met tijd, bijvoorbeeld 20261104T074500Z
-  const match = raw.match(
-    /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})?(Z)?$/
+  selectedDate = new Date(selectedDate);
+  selectedDate.setDate(
+    selectedDate.getDate() + (deltaX < 0 ? 7 : -7)
   );
 
-  if (!match) return null;
+  render();
+});
 
-  const year = Number(match[1]);
-  const month = Number(match[2]) - 1;
-  const day = Number(match[3]);
-  const hour = Number(match[4]);
-  const minute = Number(match[5]);
-  const second = Number(match[6] || 0);
-
-  // Z betekent UTC: tijdstip als UTC opslaan.
-  if (match[7] === "Z") {
-    return new Date(Date.UTC(
-      year, month, day, hour, minute, second
-    ));
-  }
-
-  // Zonder Z is de tijd lokaal.
-  return new Date(year, month, day, hour, minute, second);
-}
-
-// ICS IMPORTEREN
-function parseICS(text) {
-  const unfolded = text.replace(/\r?\n[ \t]/g, "");
-  const blocks = unfolded.split("BEGIN:VEVENT").slice(1);
-  const parsed = [];
-
-  for (const block of blocks) {
-    const lines = block.split(/\r?\n/);
-
-    const getLine = key =>
-      lines.find(line => line.startsWith(key));
-
-    const getValue = key => {
-      const line = getLine(key);
-      if (!line) return "";
-
-      return line.substring(line.indexOf(":") + 1)
-        .trim()
-        .replace(/\\,/g, ",")
-        .replace(/\\n/g, " ");
-    };
-
-    const start = parseICSDate(getLine("DTSTART"));
-    const end = parseICSDate(getLine("DTEND"));
-
-    if (start && end) {
-      parsed.push({
-        start,
-        end,
-        summary: getValue("SUMMARY"),
-        location: getValue("LOCATION"),
-        status: getValue("STATUS"),
-        uid: getValue("UID")
-      });
-    }
-  }
-
-  return parsed;
-}
-
-// ICS BESTAND IMPORTEREN
+// ICS BESTAND KIEZEN
 $("icsFile").addEventListener("change", async e => {
   const file = e.target.files[0];
   if (!file) return;
+
+  $("importStatus").textContent = "Rooster importeren...";
 
   try {
     const parsed = parseICS(await file.text());
@@ -462,6 +526,11 @@ $("icsFile").addEventListener("change", async e => {
 
     render();
     await saveRoster();
+
+    const cancelledCount = events.filter(e => e.cancelled).length;
+
+    $("importStatus").textContent =
+      `Import gelukt: ${events.length} gebeurtenissen, waarvan ${cancelledCount} vervallen.`;
   } catch (err) {
     $("importStatus").textContent =
       "Import mislukt: " + err.message;
@@ -471,6 +540,45 @@ $("icsFile").addEventListener("change", async e => {
 });
 
 // VOORBEELDROOSTER
+function demoEvents() {
+  const monday = startOfWeek(new Date());
+
+  const data = [
+    ["08:45", "09:35", "Nederlands", "Lokaal 1.08"],
+    ["09:35", "10:25", "Wiskunde", "Lokaal 2.14"],
+    ["10:45", "11:35", "Engels", "Lokaal 1.12"],
+    ["11:35", "12:25", "Biologie", "Lokaal 0.06"],
+    ["13:15", "14:05", "Geschiedenis", "Lokaal 2.02"],
+    ["14:05", "14:55", "Informatica", "Lokaal 3.01"]
+  ];
+
+  return data.map((x, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + (i < 4 ? 0 : 1));
+
+    const [sh, sm] = x[0].split(":").map(Number);
+    const [eh, em] = x[1].split(":").map(Number);
+
+    const start = new Date(d);
+    start.setHours(sh, sm, 0, 0);
+
+    const end = new Date(d);
+    end.setHours(eh, em, 0, 0);
+
+    return {
+      start,
+      end,
+      summary: x[2],
+      location: x[3],
+      description: "",
+      status: "",
+      uid: "",
+      cancelled: false,
+      changeLabel: ""
+    };
+  });
+}
+
 $("demoBtn").onclick = async () => {
   events = demoEvents();
   selectedDate = new Date();
@@ -526,7 +634,8 @@ $("installBtn").onclick = async () => {
 
 // SERVICE WORKER
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
-  navigator.serviceWorker.register("./sw.js").catch(console.error);
+  navigator.serviceWorker.register("./sw.js?v=4")
+    .catch(console.error);
 }
 
 // START
