@@ -9,10 +9,10 @@
   <title>Roostercheck</title>
 
   <link rel="manifest" href="./manifest.json">
-  <link rel="stylesheet" href="./style.css?v=3">
+  <link rel="stylesheet" href="./style.css?v=4">
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="./app.js?v=3" defer></script>
+  <script src="./app.js?v=4" defer></script>
 </head>
 
 <body>
@@ -32,10 +32,7 @@
         <button type="button" id="signupBtn">Account aanmaken</button>
       </form>
 
-      <button type="button" id="googleBtn" hidden>
-        Inloggen met Google
-      </button>
-
+      <button type="button" id="googleBtn" hidden>Inloggen met Google</button>
       <p id="authStatus" aria-live="polite"></p>
 
       <div id="signedInArea" hidden>
@@ -66,8 +63,9 @@
 
     <section>
       <h2>Planning</h2>
-      <h3>Deze week</h3>
+      <h3 id="weekTitle">Deze week</h3>
 
+      <p class="swipe-hint">← Swipe om van week te wisselen →</p>
       <div id="weekTabs"></div>
 
       <div id="schedule">
@@ -82,17 +80,13 @@
       <h3>Rooster toevoegen</h3>
       <p>Begin met een iCal/ICS-export uit je schoolportaal.</p>
 
-      <button type="button" id="demoBtn">
-        🧪 Voorbeeldrooster laden
-      </button>
+      <button type="button" id="demoBtn">🧪 Voorbeeldrooster laden</button>
 
       <p>Of importeer je eigen rooster:</p>
       <label for="icsFile">📅 Kies ICS-bestand</label>
       <input id="icsFile" type="file" accept=".ics,text/calendar">
 
-      <p id="importStatus" aria-live="polite">
-        Nog geen bestand geïmporteerd.
-      </p>
+      <p id="importStatus" aria-live="polite">Nog geen bestand geïmporteerd.</p>
     </section>
 
     <section>
