@@ -178,46 +178,44 @@ button:active {
 
 /* WEEKNAVIGATIE */
 #weekTabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  overflow: visible;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
   padding: 5px 0 14px;
 }
 
 .week-navigation {
+  grid-column: 1 / -1;
   display: flex;
   width: 100%;
-  flex: 0 0 100%;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
   margin-bottom: 12px;
 }
 
 .week-navigation strong {
   text-align: center;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .week-navigation button {
   flex-shrink: 0;
-  padding: 10px 12px;
-}
-
-#weekTabs > button:not(.day-tab) {
-  margin-bottom: 8px;
+  padding: 9px 8px;
+  font-size: 12px;
 }
 
 /* DAGEN */
 .day-tab {
-  flex: 1;
-  min-width: 57px;
-  padding: 10px 6px;
+  width: 100%;
+  min-width: 0;
+  padding: 9px 2px;
   border: 1px solid var(--line);
-  border-radius: 13px;
+  border-radius: 11px;
   background: #faf9fd;
   color: var(--text);
+  text-align: center;
+  font-size: 11px;
 }
 
 .day-tab strong,
@@ -227,7 +225,7 @@ button:active {
 
 .day-tab span {
   margin-top: 4px;
-  font-size: 11px;
+  font-size: 10px;
   color: var(--muted);
 }
 
@@ -384,7 +382,7 @@ body.dark .notice {
   }
 
   .week-navigation button {
-    padding: 9px 8px;
-    font-size: 12px;
+    padding: 9px 6px;
+    font-size: 11px;
   }
 }
