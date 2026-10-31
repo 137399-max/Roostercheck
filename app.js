@@ -295,8 +295,8 @@ function render() {
   };
   tabs.append(today);
 
-  // DAGKNOPPEN
-  for (let i = 0; i < 5; i++) {
+  // DAGKNOPPEN: MAANDAG T/M ZONDAG
+  for (let i = 0; i < 7; i++) {
     const d = new Date(week);
     d.setDate(week.getDate() + i);
 
