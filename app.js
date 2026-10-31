@@ -286,15 +286,6 @@ function render() {
   nav.append(prev, label, nextWeek);
   tabs.append(nav);
 
-  // VANDAAG
-  const today = document.createElement("button");
-  today.textContent = "Vandaag";
-  today.onclick = () => {
-    selectedDate = new Date();
-    render();
-  };
-  tabs.append(today);
-
   // DAGKNOPPEN: MAANDAG T/M ZONDAG
   for (let i = 0; i < 7; i++) {
     const d = new Date(week);
