@@ -223,9 +223,9 @@ function fmtTime(date) {
 }
 
 function sameDay(a, b) {
-  return a.toLocaleDateString("nl-NL", {
+  return a.toLocaleDateString("en-CA", {
     timeZone: "Europe/Amsterdam"
-  }) === b.toLocaleDateString("nl-NL", {
+  }) === b.toLocaleDateString("en-CA", {
     timeZone: "Europe/Amsterdam"
   });
 }
@@ -360,51 +360,56 @@ function render() {
   });
 }
 
-// ICS IMPORTEREN MET TIJDZONEVERWERKING
+// ICS DATUM CORRECT INLEZEN
+function parseICSDate(line) {
+  if (!line) return null;
+
+  const colon = line.indexOf(":");
+  if (colon === -1) return null;
+
+  const raw = line.substring(colon + 1).trim();
+
+  // Datum zonder tijd
+  const dateOnly = raw.match(/^(\d{4})(\d{2})(\d{2})$/);
+
+  if (dateOnly) {
+    return new Date(
+      Number(dateOnly[1]),
+      Number(dateOnly[2]) - 1,
+      Number(dateOnly[3])
+    );
+  }
+
+  // Datum met tijd, bijvoorbeeld 20261104T074500Z
+  const match = raw.match(
+    /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})?(Z)?$/
+  );
+
+  if (!match) return null;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]) - 1;
+  const day = Number(match[3]);
+  const hour = Number(match[4]);
+  const minute = Number(match[5]);
+  const second = Number(match[6] || 0);
+
+  // Z betekent UTC: tijdstip als UTC opslaan.
+  if (match[7] === "Z") {
+    return new Date(Date.UTC(
+      year, month, day, hour, minute, second
+    ));
+  }
+
+  // Zonder Z is de tijd lokaal.
+  return new Date(year, month, day, hour, minute, second);
+}
+
+// ICS IMPORTEREN
 function parseICS(text) {
   const unfolded = text.replace(/\r?\n[ \t]/g, "");
   const blocks = unfolded.split("BEGIN:VEVENT").slice(1);
   const parsed = [];
-
-  function parseDate(line) {
-    if (!line) return null;
-
-    const colon = line.indexOf(":");
-    if (colon === -1) return null;
-
-    const settings = line.substring(0, colon);
-    const raw = line.substring(colon + 1).trim();
-
-    const match = raw.match(
-      /^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})?)?(Z)?$/
-    );
-
-    if (!match) return null;
-
-    const year = Number(match[1]);
-    const month = Number(match[2]) - 1;
-    const day = Number(match[3]);
-    const hour = Number(match[4] || 0);
-    const minute = Number(match[5] || 0);
-    const second = Number(match[6] || 0);
-
-    // UTC-tijd: Z betekent UTC.
-    // JavaScript zet dit automatisch om naar de lokale tijd.
-    if (match[7]) {
-      return new Date(Date.UTC(
-        year, month, day, hour, minute, second
-      ));
-    }
-
-    // Tijd met een expliciete tijdzone, bijvoorbeeld Europe/Amsterdam.
-    // De browser verwerkt de lokale zomer- en wintertijd.
-    if (settings.includes("TZID=")) {
-      return new Date(year, month, day, hour, minute, second);
-    }
-
-    // Tijd zonder tijdzone: behandelen als lokale Nederlandse tijd.
-    return new Date(year, month, day, hour, minute, second);
-  }
 
   for (const block of blocks) {
     const lines = block.split(/\r?\n/);
@@ -422,15 +427,17 @@ function parseICS(text) {
         .replace(/\\n/g, " ");
     };
 
-    const start = parseDate(getLine("DTSTART"));
-    const end = parseDate(getLine("DTEND"));
+    const start = parseICSDate(getLine("DTSTART"));
+    const end = parseICSDate(getLine("DTEND"));
 
     if (start && end) {
       parsed.push({
         start,
         end,
         summary: getValue("SUMMARY"),
-        location: getValue("LOCATION")
+        location: getValue("LOCATION"),
+        status: getValue("STATUS"),
+        uid: getValue("UID")
       });
     }
   }
@@ -463,7 +470,7 @@ $("icsFile").addEventListener("change", async e => {
   e.target.value = "";
 });
 
-// VOORBEELDROOSTER LADEN
+// VOORBEELDROOSTER
 $("demoBtn").onclick = async () => {
   events = demoEvents();
   selectedDate = new Date();
@@ -471,7 +478,7 @@ $("demoBtn").onclick = async () => {
   await saveRoster();
 };
 
-// VANDAAG-KNOP
+// VANDAAG
 $("todayBtn").onclick = () => {
   selectedDate = new Date();
   render();
