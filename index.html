@@ -1,114 +1,111 @@
-<!doctype html>
+
+<!DOCTYPE html>
 <html lang="nl">
 <head>
-  <meta charset="utf-8">
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#635bff">
-  <meta name="description" content="Roostercheck - jouw schoolrooster overzichtelijk bij elkaar.">
-  <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css">
+  <meta name="theme-color" content="#6750d8">
+  <meta name="description" content="Roostercheck - jouw schoolrooster op één plek.">
   <title>Roostercheck</title>
+  <link rel="manifest" href="./manifest.json">
+  <link rel="stylesheet" href="./style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./app.js" defer></script>
 </head>
+
 <body>
-  <header class="topbar">
-    <a class="brand" href="#" aria-label="Roostercheck home"><span class="brand-mark">R</span> Roostercheck</a>
-    <button id="themeBtn" class="icon-btn" aria-label="Wissel licht/donker thema">☾</button>
+  <header>
+    <h1>Roostercheck</h1>
   </header>
 
-  <main class="shell">
-    <section class="panel" id="accountPanel">
-      <p class="eyebrow">JOUW ACCOUNT</p>
+  <main>
+    <section id="accountPanel">
       <h2>Inloggen bij Roostercheck</h2>
-      <p class="muted">Maak een account aan of log in om je rooster te bewaren.</p>
+      <p>Maak een account aan of log in om je rooster te bewaren.</p>
 
       <form id="authForm">
-        <label for="authEmail">E-mailadres</label>
-        <input id="authEmail" type="email" required autocomplete="email">
-
-        <label for="authPassword">Wachtwoord</label>
-        <input id="authPassword" type="password" required minlength="6" autocomplete="current-password">
-
-        <button class="primary" type="submit" id="loginBtn">Inloggen</button>
-        <button class="secondary" type="button" id="signupBtn">Account aanmaken</button>
+        <input id="authEmail" type="email" placeholder="E-mailadres" required>
+        <input id="authPassword" type="password" placeholder="Wachtwoord" required>
+        <button type="submit">Inloggen</button>
+        <button type="button" id="signupBtn">Account aanmaken</button>
       </form>
 
-      <button class="secondary" type="button" id="googleBtn">Doorgaan met Google</button>
-      <p id="authStatus" class="small muted" aria-live="polite"></p>
+      <button type="button" id="googleBtn" hidden>
+        Inloggen met Google
+      </button>
+
+      <p id="authStatus" aria-live="polite"></p>
 
       <div id="signedInArea" hidden>
         <p id="userEmail"></p>
-        <button class="secondary" type="button" id="logoutBtn">Uitloggen</button>
+        <button type="button" id="logoutBtn">Uitloggen</button>
       </div>
     </section>
 
-    <section class="welcome">
+    <section>
+      <p id="todayLabel"></p>
+      <h2>Hoi! 👋</h2>
+      <p>Alles voor je schooldag op één plek.</p>
+    </section>
+
+    <section class="dashboard">
       <div>
-        <p class="eyebrow" id="todayLabel">JOUW SCHOOLROOSTER</p>
-        <h1>Hoi! 👋</h1>
-        <p class="muted">Alles voor je schooldag op één plek.</p>
+        <h3>Eerstvolgende les</h3>
+        <p id="nextSubject">Geen komende les</p>
+        <p id="nextInfo">Je rooster is bijgewerkt</p>
       </div>
-      <button id="installBtn" class="primary" hidden>Installeer app</button>
-    </section>
 
-    <section class="summary-grid">
-      <article class="summary-card accent">
-        <span class="card-label">Eerstvolgende les</span>
-        <strong id="nextSubject">Nog geen rooster</strong>
-        <span id="nextInfo" class="small">Voeg je rooster toe om te beginnen</span>
-      </article>
-      <article class="summary-card">
-        <span class="card-label">Lessen vandaag</span>
-        <strong id="lessonCount">0</strong>
-        <span class="small muted">Volgens je huidige rooster</span>
-      </article>
-    </section>
-
-    <section class="panel">
-      <div class="section-heading">
-        <div><p class="eyebrow">PLANNING</p><h2>Deze week</h2></div>
-        <button id="todayBtn" class="secondary">Vandaag</button>
-      </div>
-      <div id="weekTabs" class="week-tabs" aria-label="Kies een dag"></div>
-      <div id="schedule" class="schedule">
-        <div class="empty">
-          <div class="empty-icon">📚</div>
-          <h3>Je rooster staat hier</h3>
-          <p class="muted">Importeer een .ics-roosterbestand of bekijk het voorbeeldrooster.</p>
-          <button id="demoBtn" class="primary">Bekijk voorbeeldrooster</button>
-        </div>
+      <div>
+        <h3>Lessen vandaag</h3>
+        <p id="lessonCount">0</p>
+        <small>Volgens je huidige rooster</small>
       </div>
     </section>
 
-    <section class="panel settings" id="settings">
-      <div class="section-heading">
-        <div><p class="eyebrow">JOUW GEGEVENS</p><h2>Rooster toevoegen</h2></div>
+    <section>
+      <h2>Planning</h2>
+      <h3>Deze week</h3>
+
+      <div id="weekTabs"></div>
+
+      <div id="schedule">
+        <p>Je rooster verschijnt hier.</p>
       </div>
-      <p class="muted">Begin met een iCal/ICS-export uit je schoolportaal.</p>
-      <label class="file-picker">
-        <span>📅 Kies ICS-bestand</span>
-        <input id="icsFile" type="file" accept=".ics,text/calendar">
-      </label>
-      <p id="importStatus" class="small muted" aria-live="polite">Nog geen bestand geïmporteerd.</p>
-      <div class="notice">
-        <strong>Even opletten</strong>
-        <p>Een persoonlijke Zermelo iCal-link is privé. Deel die niet openbaar. Live synchronisatie via een link komt pas in een latere versie met een beveiligde server.</p>
-      </div>
-      <div class="notice">
-        <strong>Magister</strong>
-        <p>Roostercheck vraagt nooit om je Magister-wachtwoord.</p>
-      </div>
+
+      <button type="button" id="todayBtn">Vandaag</button>
     </section>
 
-    <footer>Roostercheck · Gratis schoolrooster · Onafhankelijk hobbyproject</footer>
+    <section>
+      <h2>Jouw gegevens</h2>
+      <h3>Rooster toevoegen</h3>
+      <p>Begin met een iCal/ICS-export uit je schoolportaal.</p>
+
+      <button type="button" id="demoBtn">
+        🧪 Voorbeeldrooster laden
+      </button>
+
+      <p>Of importeer je eigen rooster:</p>
+      <label for="icsFile">📅 Kies ICS-bestand</label>
+      <input id="icsFile" type="file" accept=".ics,text/calendar">
+
+      <p id="importStatus" aria-live="polite">
+        Nog geen bestand geïmporteerd.
+      </p>
+    </section>
+
+    <section>
+      <h3>Even opletten</h3>
+      <p>Een persoonlijke Zermelo iCal-link is privé. Deel die niet openbaar. Live synchronisatie via een link komt pas in een latere versie met een beveiligde server.</p>
+
+      <h3>Magister</h3>
+      <p>Roostercheck vraagt nooit om je Magister-wachtwoord.</p>
+    </section>
   </main>
 
-  <nav class="bottom-nav">
-    <a class="active" href="#schedule">⌂ <span>Rooster</span></a>
-    <a href="#settings">⚙ <span>Instellingen</span></a>
-  </nav>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js"></script>
+  <footer>
+    <p>Roostercheck · Gratis schoolrooster · Onafhankelijk hobbyproject</p>
+    <button type="button" id="themeBtn">🌙 Thema wijzigen</button>
+    <button type="button" id="installBtn" hidden>Installeer Roostercheck</button>
+  </footer>
 </body>
 </html>
