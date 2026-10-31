@@ -57,15 +57,14 @@ async function loadRoster() {
     .maybeSingle();
 
   if (error) {
-    $("importStatus").textContent =
-      "Rooster laden mislukt: " + error.message;
+    $("importStatus").textContent = "Laden mislukt: " + error.message;
     return;
   }
 
   if (!data) {
     events = [];
-    $("importStatus").textContent = "Nog geen opgeslagen rooster.";
     render();
+    $("importStatus").textContent = "Nog geen opgeslagen rooster.";
     return;
   }
 
@@ -75,21 +74,14 @@ async function loadRoster() {
     end: new Date(e.end)
   }));
 
-  if (events.length) {
-    selectedDate = events[0].start;
-    $("importStatus").textContent = "Je opgeslagen rooster is geladen!";
-  } else {
-    $("importStatus").textContent = "Je rooster is leeg.";
-  }
-
   render();
+  $("importStatus").textContent = "Je opgeslagen rooster is geladen!";
 }
 
-// ROOSTER OPSLAAN
+// OPSLAAN
 async function saveRoster() {
   if (!currentUserId) {
-    $("importStatus").textContent =
-      "Log in om je rooster op te slaan.";
+    $("importStatus").textContent = "Log in om je rooster op te slaan.";
     return;
   }
 
@@ -136,14 +128,12 @@ $("signupBtn").onclick = async () => {
   const password = $("authPassword").value;
 
   if (!email || !password) {
-    $("authStatus").textContent =
-      "Vul je e-mailadres en wachtwoord in.";
+    $("authStatus").textContent = "Vul je e-mailadres en wachtwoord in.";
     return;
   }
 
   if (password.length < 6) {
-    $("authStatus").textContent =
-      "Minimaal 6 tekens voor je wachtwoord.";
+    $("authStatus").textContent = "Minimaal 6 tekens voor je wachtwoord.";
     return;
   }
 
@@ -160,7 +150,7 @@ $("signupBtn").onclick = async () => {
     : "Account aangemaakt! Controleer je e-mail.";
 };
 
-// GOOGLE LOGIN
+// GOOGLE
 $("googleBtn").onclick = async () => {
   const { error } = await supabaseClient.auth.signInWithOAuth({
     provider: "google",
@@ -184,13 +174,12 @@ $("logoutBtn").onclick = async () => {
   $("authStatus").textContent = "Je bent uitgelogd.";
 };
 
-// AUTH STATUS
 supabaseClient.auth.onAuthStateChange((event, session) => {
   showAccount(session);
 
   if (event === "SIGNED_IN" && session) {
     currentUserId = session.user.id;
-    setTimeout(() => loadRoster(), 0);
+    setTimeout(loadRoster, 0);
   }
 
   if (event === "SIGNED_OUT") {
@@ -223,14 +212,13 @@ function fmtTime(date) {
   });
 }
 
-// ICS-DATUM PARSEN
+// ICS DATUM
 function parseICSDate(line) {
   if (!line) return null;
 
   const colon = line.indexOf(":");
-  if (colon === -1) return null;
+  if (colon < 0) return null;
 
-  const header = line.substring(0, colon);
   const raw = line.substring(colon + 1).trim();
 
   const match = raw.match(
@@ -243,7 +231,6 @@ function parseICSDate(line) {
   const month = Number(match[2]) - 1;
   const day = Number(match[3]);
 
-  // Datum zonder tijd
   if (!match[4]) {
     return new Date(year, month, day);
   }
@@ -252,22 +239,11 @@ function parseICSDate(line) {
   const minute = Number(match[5]);
   const second = Number(match[6] || 0);
 
-  // Z betekent UTC
   if (match[7] === "Z") {
-    return new Date(Date.UTC(
-      year, month, day, hour, minute, second
-    ));
+    return new Date(Date.UTC(year, month, day, hour, minute, second));
   }
 
-  // Datum zonder Z: lokale tijd.
-  // Zermelo-export met TZID=Europe/Amsterdam wordt hiermee
-  // ook als Nederlandse lokale tijd ingelezen.
   return new Date(year, month, day, hour, minute, second);
-}
-
-// ICS TEKST NORMALISEREN
-function unfoldICS(text) {
-  return text.replace(/\r?\n[ \t]/g, "");
 }
 
 function unescapeICS(value) {
@@ -279,9 +255,9 @@ function unescapeICS(value) {
     .trim();
 }
 
-// ICS IMPORTEREN
+// ICS PARSEN
 function parseICS(text) {
-  const unfolded = unfoldICS(text);
+  const unfolded = text.replace(/\r?\n[ \t]/g, "");
   const blocks = unfolded.split("BEGIN:VEVENT").slice(1);
   const parsed = [];
 
@@ -289,15 +265,16 @@ function parseICS(text) {
     const lines = block.split(/\r?\n/);
 
     const findLine = name =>
-      lines.find(line => line.startsWith(name + ":") ||
-        line.startsWith(name + ";"));
+      lines.find(line =>
+        line.startsWith(name + ":") ||
+        line.startsWith(name + ";")
+      );
 
     const getValue = name => {
       const line = findLine(name);
       if (!line) return "";
 
-      const colon = line.indexOf(":");
-      return unescapeICS(line.substring(colon + 1));
+      return unescapeICS(line.substring(line.indexOf(":") + 1));
     };
 
     const start = parseICSDate(findLine("DTSTART"));
@@ -308,8 +285,6 @@ function parseICS(text) {
     const summary = getValue("SUMMARY");
     const description = getValue("DESCRIPTION");
     const status = getValue("STATUS").toUpperCase();
-    const uid = getValue("UID");
-    const location = getValue("LOCATION");
     const combined = `${summary} ${description}`.toLowerCase();
 
     const cancelled =
@@ -323,20 +298,11 @@ function parseICS(text) {
 
     if (cancelled) {
       changeLabel = "VERVALLEN";
-    } else if (
-      combined.includes("lokaal gewijzigd") ||
-      combined.includes("ander lokaal")
-    ) {
+    } else if (combined.includes("lokaal gewijzigd")) {
       changeLabel = "LOKAAL GEWIJZIGD";
-    } else if (
-      combined.includes("docent gewijzigd") ||
-      combined.includes("andere docent")
-    ) {
+    } else if (combined.includes("docent gewijzigd")) {
       changeLabel = "DOCENT GEWIJZIGD";
-    } else if (
-      combined.includes("verplaatst") ||
-      combined.includes("tijd gewijzigd")
-    ) {
+    } else if (combined.includes("verplaatst")) {
       changeLabel = "VERPLAATST";
     } else if (description.toLowerCase().includes("wijzigingen:")) {
       changeLabel = "GEWIJZIGD";
@@ -346,10 +312,10 @@ function parseICS(text) {
       start,
       end,
       summary: summary.replace(/^\[x\]\s*/i, ""),
-      location,
       description,
+      location: getValue("LOCATION"),
       status,
-      uid,
+      uid: getValue("UID"),
       cancelled,
       changeLabel
     });
@@ -358,10 +324,11 @@ function parseICS(text) {
   return parsed;
 }
 
-// WEEK EN DAGEN WEERGEVEN
-function render() {
+// WEEKBALK
+function renderWeek() {
   const week = startOfWeek(selectedDate);
   const tabs = $("weekTabs");
+
   tabs.innerHTML = "";
 
   $("weekTitle").textContent =
@@ -371,71 +338,49 @@ function render() {
       year: "numeric"
     });
 
-  // DAGKNOPPEN
+  const names = ["ma", "di", "wo", "do", "vr", "za", "zo"];
+
   for (let i = 0; i < 7; i++) {
     const d = new Date(week);
     d.setDate(week.getDate() + i);
 
     const button = document.createElement("button");
-    button.className = "day-tab" +
-      (sameDay(d, selectedDate) ? " selected" : "");
+    button.type = "button";
+    button.className = "day-tab";
 
-    const weekday = d.toLocaleDateString("nl-NL", {
-      weekday: "short"
-    });
+    if (sameDay(d, selectedDate)) {
+      button.classList.add("selected");
+    }
 
-    const dateLabel = d.toLocaleDateString("nl-NL", {
-      day: "numeric",
-      month: "short"
-    });
+    const dayName = document.createElement("strong");
+    dayName.textContent = names[i];
 
-    const strong = document.createElement("strong");
-    strong.textContent = weekday;
+    const dayNumber = document.createElement("span");
+    dayNumber.textContent = d.getDate();
 
-    const span = document.createElement("span");
-    span.textContent = dateLabel;
+    button.append(dayName, dayNumber);
 
-    button.append(strong, span);
-
-    button.onclick = () => {
+    button.addEventListener("click", () => {
       selectedDate = d;
       render();
-    };
+    });
 
-    tabs.append(button);
+    tabs.appendChild(button);
   }
+}
 
-  // LESSEN VAN DE GESELECTEERDE DAG
+// LESSEN WEERGEVEN
+function renderSchedule() {
   const todays = events
     .filter(e => sameDay(e.start, selectedDate))
     .sort((a, b) => a.start - b.start);
-
-  const todaysCount = events.filter(e =>
-    sameDay(e.start, new Date()) && !e.cancelled
-  ).length;
-
-  $("lessonCount").textContent = todaysCount;
-
-  const upcoming = events
-    .filter(e => !e.cancelled && e.end > new Date())
-    .sort((a, b) => a.start - b.start)[0];
-
-  $("nextSubject").textContent =
-    upcoming?.summary || "Geen komende les";
-
-  $("nextInfo").textContent = upcoming
-    ? `${fmtTime(upcoming.start)} · ${upcoming.location || "Lokaal onbekend"}`
-    : "Je rooster is bijgewerkt";
 
   const area = $("schedule");
   area.innerHTML = "";
 
   if (!todays.length) {
-    const empty = document.createElement("div");
-    empty.className = "empty";
-    empty.innerHTML =
-      '<div class="empty-icon">☀️</div><h3>Geen lessen gevonden</h3><p>Er staan geen lessen op deze dag.</p>';
-    area.append(empty);
+    area.innerHTML =
+      '<div class="empty"><div class="empty-icon">☀️</div><h3>Geen lessen gevonden</h3><p>Er staan geen lessen op deze dag.</p></div>';
     return;
   }
 
@@ -467,47 +412,74 @@ function render() {
     row.append(time, bar, details);
 
     if (e.changeLabel) {
-      const status = document.createElement("div");
-      status.className = "lesson-status";
-      status.textContent = e.changeLabel;
-      row.append(status);
+      const badge = document.createElement("div");
+      badge.className = "lesson-status";
+      badge.textContent = e.changeLabel;
+      row.append(badge);
     }
 
     area.append(row);
   });
 }
 
-// SWIPEN OM VAN WEEK TE WISSELEN
-let touchStartX = 0;
-let touchStartY = 0;
+// DASHBOARD
+function renderDashboard() {
+  const now = new Date();
 
-$("weekTabs").addEventListener("touchstart", e => {
-  if (!e.touches.length) return;
+  $("lessonCount").textContent = events.filter(e =>
+    sameDay(e.start, now) && !e.cancelled
+  ).length;
 
-  touchStartX = e.touches[0].clientX;
-  touchStartY = e.touches[0].clientY;
+  const upcoming = events
+    .filter(e => !e.cancelled && e.end > now)
+    .sort((a, b) => a.start - b.start)[0];
+
+  $("nextSubject").textContent =
+    upcoming?.summary || "Geen komende les";
+
+  $("nextInfo").textContent = upcoming
+    ? `${fmtTime(upcoming.start)} · ${upcoming.location || "Lokaal onbekend"}`
+    : "Je rooster is bijgewerkt";
+}
+
+// ALLES VERVERSEN
+function render() {
+  renderWeek();
+  renderSchedule();
+  renderDashboard();
+}
+
+// SWIPEN
+let swipeStartX = 0;
+let swipeStartY = 0;
+
+const weekTabs = $("weekTabs");
+
+weekTabs.addEventListener("touchstart", e => {
+  if (e.touches.length !== 1) return;
+
+  swipeStartX = e.touches[0].clientX;
+  swipeStartY = e.touches[0].clientY;
 }, { passive: true });
 
-$("weekTabs").addEventListener("touchend", e => {
-  if (!e.changedTouches.length) return;
+weekTabs.addEventListener("touchend", e => {
+  if (e.changedTouches.length !== 1) return;
 
-  const deltaX = e.changedTouches[0].clientX - touchStartX;
-  const deltaY = e.changedTouches[0].clientY - touchStartY;
+  const dx = e.changedTouches[0].clientX - swipeStartX;
+  const dy = e.changedTouches[0].clientY - swipeStartY;
 
-  // Alleen een duidelijke horizontale swipe telt.
-  if (Math.abs(deltaX) < 50 || Math.abs(deltaX) < Math.abs(deltaY) * 1.3) {
+  if (Math.abs(dx) < 45 || Math.abs(dx) < Math.abs(dy) * 1.2) {
     return;
   }
 
-  selectedDate = new Date(selectedDate);
-  selectedDate.setDate(
-    selectedDate.getDate() + (deltaX < 0 ? 7 : -7)
-  );
+  const newDate = new Date(selectedDate);
+  newDate.setDate(newDate.getDate() + (dx < 0 ? 7 : -7));
 
+  selectedDate = newDate;
   render();
-});
+}, { passive: true });
 
-// ICS BESTAND KIEZEN
+// ICS IMPORTEREN
 $("icsFile").addEventListener("change", async e => {
   const file = e.target.files[0];
   if (!file) return;
@@ -530,10 +502,9 @@ $("icsFile").addEventListener("change", async e => {
     const cancelledCount = events.filter(e => e.cancelled).length;
 
     $("importStatus").textContent =
-      `Import gelukt: ${events.length} gebeurtenissen, waarvan ${cancelledCount} vervallen.`;
+      `Import gelukt: ${events.length} gebeurtenissen, ${cancelledCount} vervallen.`;
   } catch (err) {
-    $("importStatus").textContent =
-      "Import mislukt: " + err.message;
+    $("importStatus").textContent = "Import mislukt: " + err.message;
   }
 
   e.target.value = "";
@@ -586,7 +557,6 @@ $("demoBtn").onclick = async () => {
   await saveRoster();
 };
 
-// VANDAAG
 $("todayBtn").onclick = () => {
   selectedDate = new Date();
   render();
@@ -634,7 +604,7 @@ $("installBtn").onclick = async () => {
 
 // SERVICE WORKER
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
-  navigator.serviceWorker.register("./sw.js?v=4")
+  navigator.serviceWorker.register("./sw.js?v=5")
     .catch(console.error);
 }
 
