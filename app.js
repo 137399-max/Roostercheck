@@ -57,7 +57,8 @@ async function loadRoster() {
     .maybeSingle();
 
   if (error) {
-    $("importStatus").textContent = "Rooster laden mislukt: " + error.message;
+    $("importStatus").textContent =
+      "Rooster laden mislukt: " + error.message;
     return;
   }
 
@@ -87,7 +88,8 @@ async function loadRoster() {
 // ROOSTER OPSLAAN
 async function saveRoster() {
   if (!currentUserId) {
-    $("importStatus").textContent = "Log in om je rooster op te slaan.";
+    $("importStatus").textContent =
+      "Log in om je rooster op te slaan.";
     return;
   }
 
@@ -134,12 +136,14 @@ $("signupBtn").onclick = async () => {
   const password = $("authPassword").value;
 
   if (!email || !password) {
-    $("authStatus").textContent = "Vul je e-mailadres en wachtwoord in.";
+    $("authStatus").textContent =
+      "Vul je e-mailadres en wachtwoord in.";
     return;
   }
 
   if (password.length < 6) {
-    $("authStatus").textContent = "Minimaal 6 tekens voor je wachtwoord.";
+    $("authStatus").textContent =
+      "Minimaal 6 tekens voor je wachtwoord.";
     return;
   }
 
@@ -272,26 +276,26 @@ function render() {
       year: "numeric"
     });
 
-  const next = document.createElement("button");
-  next.textContent = "Volgende →";
-  next.onclick = () => {
+  const nextWeek = document.createElement("button");
+  nextWeek.textContent = "Volgende →";
+  nextWeek.onclick = () => {
     selectedDate.setDate(selectedDate.getDate() + 7);
     render();
   };
 
-  nav.append(prev, label, next);
+  nav.append(prev, label, nextWeek);
   tabs.append(nav);
 
-  // TERUG NAAR VANDAAG
-  const todayButton = document.createElement("button");
-  todayButton.textContent = "Vandaag";
-  todayButton.onclick = () => {
+  // VANDAAG
+  const today = document.createElement("button");
+  today.textContent = "Vandaag";
+  today.onclick = () => {
     selectedDate = new Date();
     render();
   };
-  tabs.append(todayButton);
+  tabs.append(today);
 
-  // DAGEN
+  // DAGKNOPPEN
   for (let i = 0; i < 5; i++) {
     const d = new Date(week);
     d.setDate(week.getDate() + i);
@@ -314,7 +318,7 @@ function render() {
     tabs.append(button);
   }
 
-  // DAGROOSTER
+  // LESSEN
   const todays = events
     .filter(e => sameDay(e.start, selectedDate))
     .sort((a, b) => a.start - b.start);
@@ -433,7 +437,8 @@ $("icsFile").addEventListener("change", async e => {
     render();
     await saveRoster();
   } catch (err) {
-    $("importStatus").textContent = "Import mislukt: " + err.message;
+    $("importStatus").textContent =
+      "Import mislukt: " + err.message;
   }
 });
 
@@ -495,5 +500,6 @@ if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
   navigator.serviceWorker.register("./sw.js").catch(console.error);
 }
 
+// START
 render();
 checkLogin();
