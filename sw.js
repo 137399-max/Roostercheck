@@ -1,17 +1,16 @@
 
-const CACHE = "roostercheck-v3";
+const CACHE = "roostercheck-v4";
 
 const FILES = [
   "./",
   "./index.html",
-  "./style.css?v=3",
-  "./app.js?v=3",
+  "./style.css?v=4",
+  "./app.js?v=4",
   "./manifest.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png"
 ];
 
-// Nieuwe versie installeren
 self.addEventListener("install", event => {
   event.waitUntil(
     caches.open(CACHE)
@@ -21,7 +20,6 @@ self.addEventListener("install", event => {
   self.skipWaiting();
 });
 
-// Oude caches verwijderen
 self.addEventListener("activate", event => {
   event.waitUntil(
     caches.keys().then(keys =>
@@ -39,13 +37,11 @@ self.addEventListener("activate", event => {
   self.clients.claim();
 });
 
-// Eerst internet proberen, daarna cache
 self.addEventListener("fetch", event => {
   if (event.request.method !== "GET") return;
 
   const url = new URL(event.request.url);
 
-  // Alleen eigen websitebestanden beheren
   if (url.origin !== self.location.origin) return;
 
   event.respondWith(
