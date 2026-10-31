@@ -217,12 +217,17 @@ function atTime(date, time) {
 function fmtTime(date) {
   return date.toLocaleTimeString("nl-NL", {
     hour: "2-digit",
-    minute: "2-digit"
+    minute: "2-digit",
+    timeZone: "Europe/Amsterdam"
   });
 }
 
 function sameDay(a, b) {
-  return a.toDateString() === b.toDateString();
+  return a.toLocaleDateString("nl-NL", {
+    timeZone: "Europe/Amsterdam"
+  }) === b.toLocaleDateString("nl-NL", {
+    timeZone: "Europe/Amsterdam"
+  });
 }
 
 // VOORBEELDROOSTER
@@ -273,7 +278,8 @@ function render() {
     week.toLocaleDateString("nl-NL", {
       day: "numeric",
       month: "short",
-      year: "numeric"
+      year: "numeric",
+      timeZone: "Europe/Amsterdam"
     });
 
   const nextWeek = document.createElement("button");
@@ -296,9 +302,11 @@ function render() {
       (sameDay(d, selectedDate) ? " selected" : "");
 
     button.innerHTML = `<strong>${d.toLocaleDateString("nl-NL", {
-      weekday: "short"
+      weekday: "short",
+      timeZone: "Europe/Amsterdam"
     })}</strong><span>${d.getDate()} ${d.toLocaleDateString("nl-NL", {
-      month: "short"
+      month: "short",
+      timeZone: "Europe/Amsterdam"
     })}</span>`;
 
     button.onclick = () => {
@@ -352,57 +360,77 @@ function render() {
   });
 }
 
-// ICS LEZEN
+// ICS IMPORTEREN MET TIJDZONEVERWERKING
 function parseICS(text) {
   const unfolded = text.replace(/\r?\n[ \t]/g, "");
   const blocks = unfolded.split("BEGIN:VEVENT").slice(1);
   const parsed = [];
 
+  function parseDate(line) {
+    if (!line) return null;
+
+    const colon = line.indexOf(":");
+    if (colon === -1) return null;
+
+    const settings = line.substring(0, colon);
+    const raw = line.substring(colon + 1).trim();
+
+    const match = raw.match(
+      /^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})?)?(Z)?$/
+    );
+
+    if (!match) return null;
+
+    const year = Number(match[1]);
+    const month = Number(match[2]) - 1;
+    const day = Number(match[3]);
+    const hour = Number(match[4] || 0);
+    const minute = Number(match[5] || 0);
+    const second = Number(match[6] || 0);
+
+    // UTC-tijd: Z betekent UTC.
+    // JavaScript zet dit automatisch om naar de lokale tijd.
+    if (match[7]) {
+      return new Date(Date.UTC(
+        year, month, day, hour, minute, second
+      ));
+    }
+
+    // Tijd met een expliciete tijdzone, bijvoorbeeld Europe/Amsterdam.
+    // De browser verwerkt de lokale zomer- en wintertijd.
+    if (settings.includes("TZID=")) {
+      return new Date(year, month, day, hour, minute, second);
+    }
+
+    // Tijd zonder tijdzone: behandelen als lokale Nederlandse tijd.
+    return new Date(year, month, day, hour, minute, second);
+  }
+
   for (const block of blocks) {
-    const get = key => {
-      const line = block.split(/\r?\n/).find(l => l.startsWith(key));
-      return line
-        ? line.substring(line.indexOf(":") + 1).trim()
-        : "";
+    const lines = block.split(/\r?\n/);
+
+    const getLine = key =>
+      lines.find(line => line.startsWith(key));
+
+    const getValue = key => {
+      const line = getLine(key);
+      if (!line) return "";
+
+      return line.substring(line.indexOf(":") + 1)
+        .trim()
+        .replace(/\\,/g, ",")
+        .replace(/\\n/g, " ");
     };
 
-    const dt = key => {
-      const line = block.split(/\r?\n/).find(l => l.startsWith(key));
-      if (!line) return null;
-
-      const raw = line.substring(line.indexOf(":") + 1).trim();
-
-      if (/^\d{8}$/.test(raw)) {
-        return new Date(
-          +raw.slice(0, 4),
-          +raw.slice(4, 6) - 1,
-          +raw.slice(6, 8)
-        );
-      }
-
-      const m = raw.match(
-        /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})?Z?$/
-      );
-
-      if (!m) return null;
-
-      return new Date(
-        +m[1], +m[2] - 1, +m[3],
-        +m[4], +m[5], +(m[6] || 0)
-      );
-    };
-
-    const start = dt("DTSTART");
-    const end = dt("DTEND");
+    const start = parseDate(getLine("DTSTART"));
+    const end = parseDate(getLine("DTEND"));
 
     if (start && end) {
       parsed.push({
         start,
         end,
-        summary: get("SUMMARY")
-          .replace(/\\,/g, ",")
-          .replace(/\\n/g, " "),
-        location: get("LOCATION").replace(/\\,/g, ",")
+        summary: getValue("SUMMARY"),
+        location: getValue("LOCATION")
       });
     }
   }
@@ -410,7 +438,7 @@ function parseICS(text) {
   return parsed;
 }
 
-// ICS IMPORTEREN
+// ICS BESTAND IMPORTEREN
 $("icsFile").addEventListener("change", async e => {
   const file = e.target.files[0];
   if (!file) return;
@@ -431,6 +459,8 @@ $("icsFile").addEventListener("change", async e => {
     $("importStatus").textContent =
       "Import mislukt: " + err.message;
   }
+
+  e.target.value = "";
 });
 
 // VOORBEELDROOSTER LADEN
@@ -441,7 +471,7 @@ $("demoBtn").onclick = async () => {
   await saveRoster();
 };
 
-// VANDAAG-KNOP IN HTML
+// VANDAAG-KNOP
 $("todayBtn").onclick = () => {
   selectedDate = new Date();
   render();
@@ -466,7 +496,8 @@ $("todayLabel").textContent =
   new Date().toLocaleDateString("nl-NL", {
     weekday: "long",
     day: "numeric",
-    month: "long"
+    month: "long",
+    timeZone: "Europe/Amsterdam"
   }).toUpperCase();
 
 // INSTALLEREN
