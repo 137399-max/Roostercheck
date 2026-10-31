@@ -3,6 +3,7 @@
   font-family: Inter, system-ui, -apple-system, sans-serif;
   color: #24233a;
   background: #f5f4fb;
+
   --purple: #7357df;
   --purple-light: #eeeaff;
   --surface: #ffffff;
@@ -37,7 +38,7 @@ header h1 {
   margin: auto;
   font-size: 21px;
   font-weight: 850;
-  letter-spacing: -0.7px;
+  letter-spacing: -.7px;
 }
 
 main {
@@ -57,7 +58,7 @@ section {
 section h2 {
   margin: 0 0 9px;
   font-size: 21px;
-  letter-spacing: -0.5px;
+  letter-spacing: -.5px;
 }
 
 section h3 {
@@ -175,18 +176,40 @@ button:active {
   color: var(--purple);
 }
 
+/* WEEKNAVIGATIE */
 #weekTabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  overflow-x: auto;
+  overflow: visible;
   padding: 5px 0 14px;
-  scrollbar-width: none;
 }
 
-#weekTabs::-webkit-scrollbar {
-  display: none;
+.week-navigation {
+  display: flex;
+  width: 100%;
+  flex: 0 0 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
+.week-navigation strong {
+  text-align: center;
+  font-size: 13px;
+}
+
+.week-navigation button {
+  flex-shrink: 0;
+  padding: 10px 12px;
+}
+
+#weekTabs > button:not(.day-tab) {
+  margin-bottom: 8px;
+}
+
+/* DAGEN */
 .day-tab {
   flex: 1;
   min-width: 57px;
@@ -218,6 +241,7 @@ button:active {
   color: #eeeaff;
 }
 
+/* LESSEN */
 .lesson {
   display: grid;
   grid-template-columns: 57px 4px minmax(0, 1fr);
@@ -293,9 +317,11 @@ footer button {
   margin: 5px;
 }
 
+/* DONKERE MODUS */
 body.dark {
   background: #11111e;
   color: #f5f3ff;
+
   --surface: #201e31;
   --text: #f5f3ff;
   --muted: #aaa5bd;
@@ -328,6 +354,7 @@ body.dark .notice {
   display: none !important;
 }
 
+/* MOBIELE WEERGAVE */
 @media (max-width: 420px) {
   main {
     width: calc(100% - 20px);
@@ -350,5 +377,14 @@ body.dark .notice {
   .lesson {
     grid-template-columns: 51px 4px minmax(0, 1fr);
     gap: 9px;
+  }
+
+  .week-navigation {
+    gap: 5px;
+  }
+
+  .week-navigation button {
+    padding: 9px 8px;
+    font-size: 12px;
   }
 }
