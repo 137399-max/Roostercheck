@@ -9,10 +9,10 @@
   <title>Roostercheck</title>
 
   <link rel="manifest" href="./manifest.json">
-  <link rel="stylesheet" href="./style.css?v=6">
+  <link rel="stylesheet" href="./style.css?v=7">
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="./app.js?v=6" defer></script>
+  <script src="./app.js?v=7" defer></script>
 </head>
 
 <body>
@@ -86,6 +86,39 @@
       <p id="importStatus" aria-live="polite">Nog geen bestand geïmporteerd.</p>
     </section>
 
+    <section id="settingsPanel">
+      <h2>Instellingen ⚙️</h2>
+
+      <div class="setting-row">
+        <div>
+          <h3>Donkere modus</h3>
+          <p>Pas het uiterlijk van Roostercheck aan.</p>
+        </div>
+        <button type="button" id="themeBtn">🌙 Thema wijzigen</button>
+      </div>
+
+      <hr class="setting-divider">
+
+      <div class="setting-row">
+        <div>
+          <h3>Meldingen 🔔</h3>
+          <p>Ontvang meldingen over wijzigingen in je rooster.</p>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="notificationsToggle">
+          <span class="switch-slider"></span>
+        </label>
+      </div>
+
+      <p id="notificationStatus" aria-live="polite">
+        Meldingen staan uit.
+      </p>
+
+      <button type="button" id="testNotificationBtn">
+        🔔 Stuur testmelding
+      </button>
+    </section>
+
     <section>
       <h3>Even opletten</h3>
       <p>Een persoonlijke Zermelo iCal-link is privé. Deel die niet openbaar. Live synchronisatie via een link komt pas in een latere versie met een beveiligde server.</p>
@@ -97,7 +130,6 @@
 
   <footer>
     <p>Roostercheck · Gratis schoolrooster · Onafhankelijk hobbyproject</p>
-    <button type="button" id="themeBtn">🌙 Thema wijzigen</button>
     <button type="button" id="installBtn" hidden>Installeer Roostercheck</button>
   </footer>
 </body>
