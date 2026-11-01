@@ -1,4 +1,5 @@
 
+
 const SUPABASE_URL = "https://pakdmubgnaowikhztnip.supabase.co";
 const SUPABASE_KEY = "sb_publishable_dqTBWx0eJGY72D6b2v-oDw_aPMmJTBp";
 const REDIRECT_URL = "https://137399-max.github.io/Roostercheck/";
@@ -14,6 +15,7 @@ let events = [];
 let selectedDate = new Date();
 let deferredPrompt = null;
 let currentUserId = null;
+let serviceWorkerRegistration = null;
 
 // ACCOUNT
 async function checkLogin() {
@@ -530,6 +532,106 @@ if (localStorage.getItem("rc-theme") === "dark") {
   document.body.classList.add("dark");
 }
 
+// MELDINGEN
+function updateNotificationUI() {
+  const toggle = $("notificationsToggle");
+  const testButton = $("testNotificationBtn");
+  const status = $("notificationStatus");
+
+  if (!("Notification" in window)) {
+    toggle.disabled = true;
+    testButton.disabled = true;
+    status.textContent = "Deze browser ondersteunt geen meldingen.";
+    return;
+  }
+
+  const enabled =
+    localStorage.getItem("rc-notifications-enabled") === "true" &&
+    Notification.permission === "granted";
+
+  toggle.checked = enabled;
+  testButton.disabled = !enabled;
+
+  if (Notification.permission === "denied") {
+    status.textContent =
+      "Meldingen zijn geblokkeerd. Je kunt dit aanpassen in je browserinstellingen.";
+  } else if (enabled) {
+    status.textContent = "Meldingen staan aan! 🔔";
+  } else {
+    status.textContent = "Meldingen staan uit.";
+  }
+}
+
+$("notificationsToggle").addEventListener("change", async e => {
+  const toggle = e.target;
+
+  if (!("Notification" in window)) {
+    toggle.checked = false;
+    updateNotificationUI();
+    return;
+  }
+
+  if (!toggle.checked) {
+    localStorage.setItem("rc-notifications-enabled", "false");
+    updateNotificationUI();
+    return;
+  }
+
+  if (Notification.permission === "denied") {
+    toggle.checked = false;
+    $("notificationStatus").textContent =
+      "Meldingen zijn geblokkeerd. Pas dit aan in je browserinstellingen.";
+    return;
+  }
+
+  let permission = Notification.permission;
+
+  if (permission === "default") {
+    permission = await Notification.requestPermission();
+  }
+
+  if (permission === "granted") {
+    localStorage.setItem("rc-notifications-enabled", "true");
+  } else {
+    localStorage.setItem("rc-notifications-enabled", "false");
+  }
+
+  updateNotificationUI();
+});
+
+$("testNotificationBtn").addEventListener("click", async () => {
+  const status = $("notificationStatus");
+
+  if (
+    !("Notification" in window) ||
+    Notification.permission !== "granted" ||
+    localStorage.getItem("rc-notifications-enabled") !== "true"
+  ) {
+    status.textContent = "Schakel eerst meldingen in.";
+    updateNotificationUI();
+    return;
+  }
+
+  try {
+    const registration =
+      serviceWorkerRegistration || await navigator.serviceWorker.ready;
+
+    await registration.showNotification("Roostercheck", {
+      body: "Dit is een testmelding! Je meldingen werken. 🎉",
+      icon: "./icons/icon-192.png",
+      badge: "./icons/icon-192.png",
+      tag: "roostercheck-test",
+      data: { url: "./" }
+    });
+
+    status.textContent = "Testmelding verstuurd! 🎉";
+  } catch (error) {
+    status.textContent = "Testmelding mislukt: " + error.message;
+  }
+});
+
+updateNotificationUI();
+
 // DATUM
 $("todayLabel").textContent =
   new Date().toLocaleDateString("nl-NL", {
@@ -558,7 +660,10 @@ $("installBtn").onclick = async () => {
 
 // SERVICE WORKER
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
-  navigator.serviceWorker.register("./sw.js?v=6")
+  navigator.serviceWorker.register("./sw.js?v=7")
+    .then(registration => {
+      serviceWorkerRegistration = registration;
+    })
     .catch(console.error);
 }
 
