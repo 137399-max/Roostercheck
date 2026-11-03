@@ -5,132 +5,501 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#6750d8">
-  <meta name="description" content="Roostercheck - jouw schoolrooster op één plek.">
+  <meta name="description" content="Roostercheck - jouw schoolrooster op één plek, met chat en wie-is-waar.">
   <title>Roostercheck</title>
 
   <link rel="manifest" href="./manifest.json">
-  <link rel="stylesheet" href="./style.css?v=7">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="stylesheet" href="./style.css?v=16">
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="./app.js?v=7" defer></script>
+  <script src="./app.js?v=16" defer></script>
 </head>
 
 <body>
-  <header>
-    <h1>Roostercheck</h1>
-  </header>
+  <div id="loadingScreen" class="auth-screen">
+    <div class="auth-card loading-card">
+      <img src="./icons/icon-192.png" alt="" class="auth-logo">
+      <p>Roostercheck laden...</p>
+    </div>
+  </div>
 
-  <main>
-    <section id="accountPanel">
-      <h2>Inloggen bij Roostercheck</h2>
-      <p>Maak een account aan of log in om je rooster te bewaren.</p>
+  <div id="authScreen" class="auth-screen" hidden>
+    <div class="auth-card">
+      <img src="./icons/icon-192.png" alt="" class="auth-logo">
+      <h1>Roostercheck</h1>
+      <p class="auth-subtitle">Je rooster, altijd bij de hand.</p>
+
+      <div class="auth-tabs" role="tablist" aria-label="Inloggen of account aanmaken">
+        <button type="button" id="loginTab" class="auth-tab active" role="tab" aria-selected="true">
+          Inloggen
+        </button>
+        <button type="button" id="signupTab" class="auth-tab" role="tab" aria-selected="false">
+          Account aanmaken
+        </button>
+      </div>
 
       <form id="authForm">
-        <input id="authEmail" type="email" placeholder="E-mailadres" required>
-        <input id="authPassword" type="password" placeholder="Wachtwoord" required>
-        <button type="submit">Inloggen</button>
-        <button type="button" id="signupBtn">Account aanmaken</button>
+        <label for="authEmail">E-mailadres</label>
+        <input
+          id="authEmail"
+          type="email"
+          autocomplete="email"
+          placeholder="jij@school.nl"
+          required
+        >
+
+        <label for="authPassword">Wachtwoord</label>
+        <input
+          id="authPassword"
+          type="password"
+          autocomplete="current-password"
+          placeholder="Minstens 6 tekens"
+          minlength="6"
+          required
+        >
+
+        <button type="submit" id="authSubmitBtn">Inloggen</button>
       </form>
 
       <button type="button" id="googleBtn" hidden>Inloggen met Google</button>
+
       <p id="authStatus" aria-live="polite"></p>
-
-      <div id="signedInArea" hidden>
-        <p id="userEmail"></p>
-        <button type="button" id="logoutBtn">Uitloggen</button>
-      </div>
-    </section>
-
-    <section>
-      <p id="todayLabel"></p>
-      <h2>Hoi! 👋</h2>
-      <p>Alles voor je schooldag op één plek.</p>
-    </section>
-
-    <section class="dashboard">
-      <div>
-        <h3>Eerstvolgende les</h3>
-        <p id="nextSubject">Geen komende les</p>
-        <p id="nextInfo">Je rooster is bijgewerkt</p>
-      </div>
-
-      <div>
-        <h3>Lessen vandaag</h3>
-        <p id="lessonCount">0</p>
-        <small>Volgens je huidige rooster</small>
-      </div>
-    </section>
-
-    <section>
-      <h2>Planning</h2>
-      <h3 id="weekTitle">Deze week</h3>
-      <p class="swipe-hint">← Swipe links of rechts om van week te wisselen →</p>
-
-      <div id="weekTabs"></div>
-
-      <div id="schedule">
-        <p>Je rooster verschijnt hier.</p>
-      </div>
-
-      <button type="button" id="todayBtn">Vandaag</button>
-    </section>
-
-    <section>
-      <h2>Jouw gegevens</h2>
-      <h3>Rooster toevoegen</h3>
-      <p>Begin met een iCal/ICS-export uit je schoolportaal.</p>
-
-      <label for="icsFile">📅 Kies ICS-bestand</label>
-      <input id="icsFile" type="file" accept=".ics,text/calendar">
-
-      <p id="importStatus" aria-live="polite">Nog geen bestand geïmporteerd.</p>
-    </section>
-
-    <section id="settingsPanel">
-      <h2>Instellingen ⚙️</h2>
-
-      <div class="setting-row">
-        <div>
-          <h3>Donkere modus</h3>
-          <p>Pas het uiterlijk van Roostercheck aan.</p>
-        </div>
-        <button type="button" id="themeBtn">🌙 Thema wijzigen</button>
-      </div>
-
-      <hr class="setting-divider">
-
-      <div class="setting-row">
-        <div>
-          <h3>Meldingen 🔔</h3>
-          <p>Ontvang meldingen over wijzigingen in je rooster.</p>
-        </div>
-        <label class="switch">
-          <input type="checkbox" id="notificationsToggle">
-          <span class="switch-slider"></span>
-        </label>
-      </div>
-
-      <p id="notificationStatus" aria-live="polite">
-        Meldingen staan uit.
+      <p class="auth-note">
+        Je rooster en iCal-link worden privé bij je account opgeslagen.
       </p>
+    </div>
+  </div>
 
-      <button type="button" id="testNotificationBtn">
-        🔔 Stuur testmelding
+  <div id="appShell" hidden>
+    <header>
+      <div class="header-inner">
+        <h1>Roostercheck</h1>
+        <div id="userMenu">
+          <span id="userEmail"></span>
+          <button type="button" id="logoutBtn">Uitloggen</button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <div id="rosterView" class="app-view">
+        <section>
+          <p id="todayLabel"></p>
+          <h2>Hoi! 👋</h2>
+          <p>Alles voor je schooldag op één plek.</p>
+        </section>
+
+        <section class="dashboard">
+          <div>
+            <h3>Eerstvolgende les</h3>
+            <p id="nextSubject">Geen komende les</p>
+            <p id="nextInfo">Je rooster is bijgewerkt</p>
+          </div>
+
+          <div>
+            <h3>Lessen vandaag</h3>
+            <p id="lessonCount">0</p>
+            <small>Volgens je huidige rooster</small>
+          </div>
+        </section>
+
+        <section id="rosterPanel">
+          <h2>Jouw rooster</h2>
+          <h3 id="rosterLinkedTitle">Rooster koppelen</h3>
+          <p>
+            Plak de persoonlijke iCal-link uit je schoolportaal. Roostercheck haalt
+            je rooster op en bewaart het bij je account.
+          </p>
+
+          <form id="icalForm">
+            <input
+              id="icalUrl"
+              type="text"
+              inputmode="url"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="https://..."
+              aria-label="iCal-link"
+              required
+            >
+            <button type="submit" id="linkRosterBtn">Rooster koppelen</button>
+          </form>
+
+          <p id="importStatus" aria-live="polite">Nog geen rooster gekoppeld.</p>
+          <p id="lastSync" class="sync-meta" hidden></p>
+
+          <div id="syncActions" hidden>
+            <button type="button" id="refreshBtn">🔄 Rooster vernieuwen</button>
+            <button type="button" id="unlinkBtn">Ontkoppelen</button>
+          </div>
+        </section>
+
+        <section>
+          <h2>Planning</h2>
+
+          <div class="week-nav">
+            <button
+              type="button"
+              id="prevWeekBtn"
+              class="week-arrow"
+              aria-label="Vorige week"
+              title="Vorige week"
+            >‹</button>
+            <h3 id="weekTitle">Deze week</h3>
+            <button
+              type="button"
+              id="nextWeekBtn"
+              class="week-arrow"
+              aria-label="Volgende week"
+              title="Volgende week"
+            >›</button>
+          </div>
+
+          <p class="swipe-hint">Gebruik de pijlen of swipe om van week te wisselen.</p>
+
+          <div id="weekTabs"></div>
+
+          <div id="schedule">
+            <p>Je rooster verschijnt hier.</p>
+          </div>
+
+          <button type="button" id="todayBtn">Vandaag</button>
+        </section>
+      </div>
+
+      <div id="chatView" class="app-view" hidden>
+        <section class="chat-shell" id="chatShell">
+          <div class="chat-list-pane">
+            <div class="chat-list-head">
+              <div>
+                <h2>Chats</h2>
+                <p id="chatSummary">Nog geen gesprekken</p>
+              </div>
+              <button type="button" id="newChatBtn" class="round-btn" aria-label="Nieuwe chat" title="Nieuwe chat">+</button>
+            </div>
+
+            <div class="chat-search">
+              <input id="chatSearch" type="search" placeholder="Zoek in je chats" autocomplete="off">
+            </div>
+
+            <p id="chatListStatus" class="chat-list-status" aria-live="polite"></p>
+            <div id="conversationList" class="conversation-list"></div>
+          </div>
+
+          <div class="chat-room-pane" id="chatRoomPane">
+            <div id="chatEmpty" class="chat-empty">
+              <div class="chat-empty-icon">💬</div>
+              <h3>Kies een chat</h3>
+              <p>Start een privéchat, maak een groep of join met een code.</p>
+              <div class="chat-empty-actions">
+                <button type="button" id="emptyNewChatBtn">Nieuwe chat</button>
+                <button type="button" id="emptyJoinBtn" class="secondary-btn">Deelnemen met code</button>
+              </div>
+            </div>
+
+            <div id="chatRoom" hidden>
+              <div class="chat-room-head">
+                <button type="button" id="chatBackBtn" class="icon-btn chat-back" aria-label="Terug naar chats">‹</button>
+                <div class="chat-room-title">
+                  <strong id="chatRoomName">Chat</strong>
+                  <span id="chatRoomMeta"></span>
+                </div>
+                <button type="button" id="chatAliasBtn" class="icon-btn" aria-label="Naam aanpassen" title="Naam aanpassen" hidden>✎</button>
+                <button type="button" id="chatInfoBtn" class="icon-btn" aria-label="Chatinformatie" title="Chatinformatie">ⓘ</button>
+              </div>
+
+              <div id="chatMessages" class="chat-messages" aria-live="polite"></div>
+
+              <form id="chatComposer" class="chat-composer">
+                <label class="sr-only" for="chatInput">Bericht</label>
+                <textarea
+                  id="chatInput"
+                  rows="1"
+                  maxlength="2000"
+                  placeholder="Typ een bericht..."
+                  autocomplete="off"
+                ></textarea>
+                <button type="submit" id="chatSendBtn" class="send-btn" aria-label="Versturen">➤</button>
+              </form>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div id="presenceView" class="app-view" hidden>
+        <section>
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">LIVE VANUIT HET ROOSTER</p>
+              <h2>Wie is waar</h2>
+              <p>Zie in één oogopslag wie in de les zit, pauze heeft of tussenuren heeft.</p>
+            </div>
+            <button type="button" id="refreshPresenceBtn" class="secondary-btn small-btn">Vernieuwen</button>
+          </div>
+
+          <div id="selfPresence" class="self-presence">
+            <div class="avatar" id="selfAvatar">J</div>
+            <div class="self-presence-text">
+              <strong>Jij</strong>
+              <span id="selfPresenceStatus">Status laden...</span>
+              <small id="selfPresenceDetail"></small>
+            </div>
+            <span id="selfPresenceBadge" class="status-badge vrij">VRIJ</span>
+          </div>
+
+          <p id="presenceUpdated" class="presence-updated"></p>
+        </section>
+
+        <section>
+          <div class="presence-toolbar">
+            <h2>Mijn school</h2>
+            <input id="presenceSearch" type="search" placeholder="Zoek iemand..." autocomplete="off">
+          </div>
+          <div id="presenceList" class="presence-list"></div>
+        </section>
+      </div>
+
+      <div id="settingsView" class="app-view" hidden>
+        <section id="profilePanel">
+          <h2>Je profiel</h2>
+
+          <div class="setting-row">
+            <div>
+              <h3>Je naam</h3>
+              <p>Zo zien anderen je in de chat en bij "Wie is waar".</p>
+            </div>
+            <button type="button" id="editNameBtn" class="secondary-btn">Wijzigen</button>
+          </div>
+
+          <form id="nameForm" hidden>
+            <label for="displayNameInput">Naam</label>
+            <input
+              id="displayNameInput"
+              type="text"
+              maxlength="40"
+              autocomplete="nickname"
+              placeholder="Bijvoorbeeld: Sanne"
+              required
+            >
+            <button type="submit" id="saveNameBtn">Naam opslaan</button>
+          </form>
+        </section>
+
+        <section id="settingsPanel">
+          <h2>Instellingen ⚙️</h2>
+
+          <div class="setting-row">
+            <div>
+              <h3>Donkere modus</h3>
+              <p>Pas het uiterlijk van Roostercheck aan.</p>
+            </div>
+            <button type="button" id="themeBtn">🌙 Thema wijzigen</button>
+          </div>
+
+          <hr class="setting-divider">
+
+          <div class="setting-row">
+            <div>
+              <h3>Meldingen 🔔</h3>
+              <p>Ontvang direct een melding als er een les vervalt, ook als de app dicht is.</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="notificationsToggle">
+              <span class="switch-slider"></span>
+            </label>
+          </div>
+
+          <p id="notificationStatus" aria-live="polite">
+            Meldingen staan uit.
+          </p>
+
+          <button type="button" id="testNotificationBtn">
+            🔔 Stuur testmelding
+          </button>
+
+          <hr class="setting-divider">
+
+          <div class="setting-row">
+            <div>
+              <h3>Chatmeldingen op dit apparaat</h3>
+              <p>Ontvang een melding als er een nieuw chatbericht binnenkomt, ook als de app dicht is. Zet hiervoor ook Meldingen aan.</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="chatNotificationsToggle" checked>
+              <span class="switch-slider"></span>
+            </label>
+          </div>
+        </section>
+
+        <section>
+          <h2>Privacy</h2>
+          <h3>Je iCal-link</h3>
+          <p>
+            Je persoonlijke iCal-link is privé. Bewaar hem in je account en deel
+            hem niet openbaar. Roostercheck gebruikt de link alleen om jouw rooster
+            bij te werken.
+          </p>
+
+          <h3>Je status</h3>
+          <p>
+            Je status (in les, pauze, tussenuur of vrij) wordt automatisch uit je
+            rooster gehaald en gedeeld met andere ingelogde gebruikers. Je volledige
+            rooster en iCal-link blijven privé.
+          </p>
+
+          <h3>Magister</h3>
+          <p>
+            Roostercheck vraagt nooit om je Magister-wachtwoord. Gebruik alleen de
+            iCal-link uit je schoolportaal.
+          </p>
+        </section>
+      </div>
+    </main>
+
+    <footer>
+      <p>Roostercheck · Gratis schoolrooster · Onafhankelijk hobbyproject</p>
+      <button type="button" id="installBtn" hidden>Installeer Roostercheck</button>
+    </footer>
+
+    <nav id="bottomNav" class="bottom-nav" aria-label="Hoofdnavigatie">
+      <button type="button" class="nav-item active" data-view="rooster">
+        <span class="nav-icon" aria-hidden="true">📅</span>
+        <span>Rooster</span>
       </button>
-    </section>
+      <button type="button" class="nav-item" data-view="chat">
+        <span class="nav-icon" aria-hidden="true">💬</span>
+        <span>Chat</span>
+        <span id="chatNavBadge" class="nav-badge" hidden>0</span>
+      </button>
+      <button type="button" class="nav-item" data-view="presence">
+        <span class="nav-icon" aria-hidden="true">📍</span>
+        <span>Waar</span>
+      </button>
+      <button type="button" class="nav-item" data-view="settings">
+        <span class="nav-icon" aria-hidden="true">⚙️</span>
+        <span>Meer</span>
+      </button>
+    </nav>
 
-    <section>
-      <h3>Even opletten</h3>
-      <p>Een persoonlijke Zermelo iCal-link is privé. Deel die niet openbaar. Live synchronisatie via een link komt pas in een latere versie met een beveiligde server.</p>
+    <div id="newChatModal" class="modal" hidden>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="newChatTitle">
+        <div class="modal-head">
+          <h2 id="newChatTitle">Nieuwe chat</h2>
+          <button type="button" class="icon-btn modal-close" data-close-modal="newChatModal" aria-label="Sluiten">×</button>
+        </div>
 
-      <h3>Magister</h3>
-      <p>Roostercheck vraagt nooit om je Magister-wachtwoord.</p>
-    </section>
-  </main>
+        <div class="modal-tabs" role="tablist" aria-label="Soort chat">
+          <button type="button" class="modal-tab active" data-chat-tab="person" role="tab" aria-selected="true">Persoon</button>
+          <button type="button" class="modal-tab" data-chat-tab="group" role="tab" aria-selected="false">Groep</button>
+          <button type="button" class="modal-tab" data-chat-tab="join" role="tab" aria-selected="false">Code</button>
+        </div>
 
-  <footer>
-    <p>Roostercheck · Gratis schoolrooster · Onafhankelijk hobbyproject</p>
-    <button type="button" id="installBtn" hidden>Installeer Roostercheck</button>
-  </footer>
+        <div id="newChatPersonPane" class="modal-pane">
+          <label for="peopleSearch">Zoek een klasgenoot</label>
+          <input id="peopleSearch" type="search" placeholder="Typ een naam..." autocomplete="off">
+          <div id="peopleResults" class="people-results"></div>
+        </div>
+
+        <div id="newChatGroupPane" class="modal-pane" hidden>
+          <label for="groupName">Groepsnaam</label>
+          <input id="groupName" type="text" maxlength="60" placeholder="Bijvoorbeeld: 3HAVO uitje" autocomplete="off">
+
+          <label for="groupPeopleSearch">Leden toevoegen</label>
+          <input id="groupPeopleSearch" type="search" placeholder="Zoek klasgenoten..." autocomplete="off">
+          <div id="groupPeopleResults" class="people-results"></div>
+          <div id="selectedMembers" class="selected-members"></div>
+
+          <button type="button" id="createGroupBtn">Groep maken</button>
+        </div>
+
+        <div id="newChatJoinPane" class="modal-pane" hidden>
+          <label for="joinCodeInput">Groepscode</label>
+          <input
+            id="joinCodeInput"
+            type="text"
+            maxlength="12"
+            placeholder="Bijvoorbeeld: K3M7P2QX"
+            autocomplete="off"
+            autocapitalize="characters"
+            spellcheck="false"
+          >
+          <p class="hint">Je krijgt de code van iemand uit de groep. Je kunt ook op de uitnodigingslink klikken.</p>
+          <button type="button" id="joinGroupBtn">Deelnemen aan groep</button>
+        </div>
+
+        <p id="newChatStatus" class="modal-status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div id="chatInfoModal" class="modal" hidden>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="chatInfoTitle">
+        <div class="modal-head">
+          <h2 id="chatInfoTitle">Chatinformatie</h2>
+          <button type="button" class="icon-btn modal-close" data-close-modal="chatInfoModal" aria-label="Sluiten">×</button>
+        </div>
+
+        <p id="chatInfoMeta" class="modal-subtitle"></p>
+        <div id="chatInfoMembers" class="info-members"></div>
+
+        <button type="button" id="editAliasBtn" class="secondary-btn alias-open-btn" hidden>
+          ✏️ Naam aanpassen
+        </button>
+
+        <div id="inviteBox" class="invite-box" hidden>
+          <h3>Uitnodigen</h3>
+          <p>Deel de code of stuur een uitnodiging per e-mail.</p>
+
+          <div class="invite-code-row">
+            <strong id="inviteCode">-</strong>
+            <button type="button" id="copyInviteBtn" class="secondary-btn small-btn">Kopieer</button>
+          </div>
+
+          <div class="invite-actions">
+            <button type="button" id="mailInviteBtn">✉️ Via e-mail</button>
+            <button type="button" id="shareInviteBtn" class="secondary-btn">Deel link</button>
+          </div>
+
+          <button type="button" id="regenerateInviteBtn" class="text-btn" hidden>Nieuwe code maken</button>
+        </div>
+
+        <button type="button" id="deleteChatBtn" class="danger-btn" hidden>Chat verwijderen</button>
+        <button type="button" id="leaveGroupBtn" class="danger-btn" hidden>Groep verlaten</button>
+      </div>
+    </div>
+
+    <div id="aliasModal" class="modal" hidden>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="aliasTitle">
+        <div class="modal-head">
+          <h2 id="aliasTitle">Naam aanpassen</h2>
+          <button type="button" class="icon-btn modal-close" data-close-modal="aliasModal" aria-label="Sluiten">×</button>
+        </div>
+
+        <p id="aliasSubtitle" class="modal-subtitle"></p>
+
+        <form id="aliasForm">
+          <label for="aliasInput">Naam die jij ziet</label>
+          <input
+            id="aliasInput"
+            type="text"
+            maxlength="40"
+            autocomplete="off"
+            placeholder="Bijvoorbeeld: Sanne"
+            required
+          >
+          <button type="submit" id="saveAliasBtn">Opslaan</button>
+        </form>
+
+        <button type="button" id="clearAliasBtn" class="text-btn" hidden>
+          Echte naam gebruiken
+        </button>
+        <p id="aliasStatus" class="modal-status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  </div>
 </body>
 </html>

@@ -1,7 +1,7 @@
 {
   "name": "Roostercheck",
   "short_name": "Roostercheck",
-  "description": "Jouw schoolrooster overzichtelijk bij elkaar.",
+  "description": "Jouw schoolrooster, chat met klasgenoten en wie is waar.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

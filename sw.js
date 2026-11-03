@@ -1,11 +1,11 @@
 
-const CACHE = "roostercheck-v7";
+const CACHE = "roostercheck-v16";
 
 const FILES = [
   "./",
   "./index.html",
-  "./style.css?v=7",
-  "./app.js?v=7",
+  "./style.css?v=16",
+  "./app.js?v=16",
   "./manifest.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png"
@@ -65,9 +65,77 @@ self.addEventListener("fetch", event => {
   );
 });
 
+// PUSHMELDING ONTVANGEN
+self.addEventListener("push", event => {
+  let payload = {};
+
+  if (event.data) {
+    try {
+      payload = event.data.json();
+    } catch {
+      payload = { body: event.data.text() };
+    }
+  }
+
+  if (!payload || typeof payload !== "object") {
+    payload = {};
+  }
+
+  const title = payload.title || "Roostercheck";
+  const options = {
+    body: payload.body || "Er is iets veranderd in je rooster.",
+    icon: payload.icon || "./icons/icon-192.png",
+    badge: payload.badge || "./icons/icon-192.png",
+    tag: payload.tag || "roostercheck",
+    renotify: true,
+    data: { url: payload.url || "./" },
+    timestamp: Date.now()
+  };
+
+  event.waitUntil(
+    (async () => {
+      // Staat de app open en zichtbaar? Dan regelt de app zelf de
+      // melding (realtime chat of de roostercontrole).
+      const clientList = await self.clients
+        .matchAll({
+          type: "window",
+          includeUncontrolled: true
+        })
+        .catch(() => []);
+
+      if (
+        clientList.some(client => client.visibilityState === "visible")
+      ) {
+        return;
+      }
+
+      await self.registration.showNotification(title, options);
+    })()
+  );
+});
+
+// DE PUSHINSCHRIJVING IS VERLOREN GEGAAN
+self.addEventListener("pushsubscriptionchange", event => {
+  event.waitUntil(
+    self.clients.matchAll({
+      type: "window",
+      includeUncontrolled: true
+    }).then(clientList => {
+      for (const client of clientList) {
+        client.postMessage({ type: "push-subscription-change" });
+      }
+    })
+  );
+});
+
 // OP EEN MELDING TIKKEN
 self.addEventListener("notificationclick", event => {
   event.notification.close();
+
+  const targetUrl = new URL(
+    (event.notification.data && event.notification.data.url) || "./",
+    self.registration.scope
+  ).href;
 
   event.waitUntil(
     self.clients.matchAll({
@@ -75,12 +143,18 @@ self.addEventListener("notificationclick", event => {
       includeUncontrolled: true
     }).then(clientList => {
       for (const client of clientList) {
-        if ("focus" in client) {
-          return client.focus();
+        if (
+          "focus" in client &&
+          client.url.startsWith(self.registration.scope)
+        ) {
+          return client.focus().then(focused => {
+            focused.postMessage({ type: "open-url", url: targetUrl });
+            return focused;
+          });
         }
       }
 
-      return self.clients.openWindow(self.registration.scope);
+      return self.clients.openWindow(targetUrl);
     })
   );
 });
